@@ -1,0 +1,2880 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bimbel Pintara | Sistem Manajemen & Portal Wali Murid</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- html2pdf untuk cetak kuitansi PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Modal Container -->
+    <div id="global-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div id="global-modal-box" class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 my-8 animate-fade-in"></div>
+    </div>
+
+    <!-- Lightbox Foto Dokumentasi -->
+    <div id="photo-lightbox" onclick="closePhotoLightbox()" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/90 p-4 cursor-zoom-out">
+        <div class="max-w-3xl w-full flex flex-col items-center gap-3">
+            <img id="lightbox-img" src="" alt="Foto Dokumentasi Belajar" class="max-h-[82vh] w-auto rounded-2xl shadow-2xl border border-white/15">
+            <p id="lightbox-caption" class="text-white text-xs sm:text-sm font-medium bg-white/10 px-4 py-2 rounded-full"></p>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- LAYAR AWAL: PORTAL PUBLIK & LOGIN BER-PIN                             -->
+    <!-- ===================================================================== -->
+    <div id="auth-screen" class="min-h-screen flex flex-col justify-between bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white p-4 sm:p-8">
+        <header class="max-w-6xl w-full mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-extrabold text-xl shadow-lg shadow-amber-400/20">
+                    <i class="ph-bold ph-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 id="auth-brand-name" class="text-lg sm:text-xl font-extrabold tracking-tight text-white">Bimbel Pintara</h1>
+                    <p id="auth-brand-owner" class="text-xs text-amber-300 font-medium">Owner: Reni Indriyani, S. Pd., A. H.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="auth-sync-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white/10 text-amber-200 border border-white/15">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Menghubungkan...
+                </span>
+                <button onclick="openBackupModal()" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold border border-white/15 transition flex items-center gap-1.5">
+                    <i class="ph-bold ph-database"></i> Cadangan / Restore
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-6xl w-full mx-auto my-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <!-- Kartu Informasi & Pendaftaran Online -->
+            <div class="lg:col-span-7 bg-white/10 backdrop-blur-md border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6">
+                <div class="space-y-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold border border-amber-400/30">
+                        <i class="ph-fill ph-sparkle"></i> PAUD • SD • SMP • SMA & TKA Matematika
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold leading-tight">
+                        Pendampingan Belajar Terstruktur, Terpantau & Transparan
+                    </h2>
+                    <p id="auth-brand-address" class="text-xs sm:text-sm text-slate-300 flex items-center gap-1.5">
+                        <i class="ph-fill ph-map-pin text-amber-400"></i> Karangsono Krajan 09/01 Mranggen Demak • Buka 09.00 – 21.00 WIB
+                    </p>
+                </div>
+
+                <!-- Pilihan Akses Portal -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="showAuthPanel('parent')" id="btn-panel-parent" class="p-4 rounded-2xl bg-amber-400 text-slate-950 font-bold text-left shadow-lg transition flex items-center justify-between">
+                        <div>
+                            <div class="text-xs uppercase tracking-wider opacity-80">Wali Murid</div>
+                            <div class="text-base font-extrabold">Portal Orang Tua</div>
+                        </div>
+                        <i class="ph-bold ph-users-three text-2xl"></i>
+                    </button>
+                    <button onclick="showAuthPanel('register')" id="btn-panel-register" class="p-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-left transition flex items-center justify-between">
+                        <div>
+                            <div class="text-xs uppercase tracking-wider text-amber-300">Siswa Baru</div>
+                            <div class="text-base font-extrabold">Daftar Online</div>
+                        </div>
+                        <i class="ph-bold ph-note-pencil text-2xl text-amber-300"></i>
+                    </button>
+                </div>
+
+                <!-- Panel Portal Orang Tua -->
+                <div id="panel-parent-login" class="bg-white text-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-extrabold text-base sm:text-lg text-slate-900">Masuk Portal Orang Tua</h3>
+                        <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">Pantau Anak & SPP</span>
+                    </div>
+                    <p class="text-xs text-slate-500">Masukkan Nomor WhatsApp Wali Murid yang terdaftar di Bimbel Pintara untuk melihat jadwal sesi, foto belajar, evaluasi anak, dan tagihan SPP.</p>
+                    <form onsubmit="loginAsParent(event)" class="flex flex-col sm:flex-row gap-2.5">
+                        <input type="tel" id="parent-login-phone" required placeholder="Contoh: 089688196517" class="flex-1 px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <button type="submit" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md transition whitespace-nowrap">
+                            Buka Portal Anak
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Panel Pendaftaran Siswa Baru -->
+                <div id="panel-public-register" class="hidden bg-white text-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-extrabold text-base sm:text-lg text-slate-900">Formulir Pendaftaran Siswa Baru</h3>
+                        <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Langsung Terdaftar</span>
+                    </div>
+                    <form onsubmit="handlePublicRegistration(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap Siswa *</label>
+                            <input type="text" id="reg-student-name" required placeholder="Nama panggilan / lengkap" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Jenjang / Kelas *</label>
+                            <select id="reg-grade" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Program Bimbingan *</label>
+                            <select id="reg-program" onchange="updatePublicPricePreview()" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Paket Pertemuan *</label>
+                            <select id="reg-session-package" onchange="updatePublicPricePreview()" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="8">Paket 8x Pertemuan</option>
+                                <option value="12">Paket 12x Pertemuan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Tarif Bulanan / Paket *</label>
+                            <select id="reg-tariff" onchange="updatePublicPricePreview()" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Nama Wali Murid *</label>
+                            <input type="text" id="reg-parent-name" required placeholder="Contoh: Ibu Siti" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block font-semibold text-slate-700 mb-1">Nomor WhatsApp Wali Murid *</label>
+                            <input type="tel" id="reg-parent-phone" required placeholder="Contoh: 0895xxxxxxxx" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div id="reg-price-preview" class="sm:col-span-2 p-3 rounded-xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-900 font-medium"></div>
+                        <div class="sm:col-span-2 flex justify-end gap-2 pt-1">
+                            <button type="button" onclick="showAuthPanel('parent')" class="px-4 py-2.5 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md">Kirim Pendaftaran</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Kartu Login Staf / Owner & Tutor -->
+            <div class="lg:col-span-5 bg-white text-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl">
+                        <i class="ph-bold ph-shield-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-lg text-slate-900">Login Pengelola & Tutor</h3>
+                        <p class="text-xs text-slate-500">Dilindungi PIN keamanan internal Bimbel Pintara</p>
+                    </div>
+                </div>
+
+                <form onsubmit="handleStaffLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilih Peran Akses</label>
+                        <select id="staff-role-select" onchange="toggleTutorSelect()" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="admin">Owner / Admin Utama (Akses Penuh)</option>
+                            <option value="tutor">Tutor Pengajar (Rombel, Absensi & Media)</option>
+                        </select>
+                    </div>
+
+                    <div id="staff-tutor-wrapper" class="hidden">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Tutor</label>
+                        <select id="staff-tutor-select" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Masukkan PIN Keamanan</label>
+                        <input type="password" id="staff-pin-input" inputmode="numeric" required placeholder="••••••" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-center text-lg tracking-widest font-extrabold focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-indigo-900 text-amber-300 font-extrabold text-sm shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-lock-key-open"></i> Masuk ke Dasbor Manajemen
+                    </button>
+                </form>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-1">
+                    <div class="font-bold text-slate-800">Info Kontak Bimbel Pintara:</div>
+                    <div>WhatsApp Admin: <span id="auth-wa-display" class="font-semibold text-indigo-700">0895423088070</span></div>
+                    <div>Jam Operasional: <span id="auth-hours-display" class="font-semibold">09.00 - 21.00</span> WIB</div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="max-w-6xl w-full mx-auto text-center text-xs text-slate-400">
+            &copy; 2026 Bimbel Pintara • Sistem Informasi Akademik, Rombel, Keuangan & Portal Wali Murid
+        </footer>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- APLIKASI UTAMA (DASBOR OWNER / TUTOR / PORTAL ORANG TUA)              -->
+    <!-- ===================================================================== -->
+    <div id="main-app" class="hidden min-h-screen flex-col">
+        <!-- Top Navbar -->
+        <header class="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-extrabold text-lg">
+                        <i class="ph-bold ph-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="nav-brand-name" class="font-extrabold text-sm sm:text-base tracking-tight">Bimbel Pintara</span>
+                            <span id="nav-role-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/30 text-amber-300 border border-amber-400/30">Owner</span>
+                        </div>
+                        <p id="nav-subtitle" class="text-[11px] text-slate-400 hidden sm:block">Karangsono Krajan 09/01 Mranggen Demak</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span id="nav-sync-badge" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white/10 text-emerald-300">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Tersimpan
+                    </span>
+                    <button onclick="forceSyncNow()" class="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs font-bold flex items-center gap-1.5 transition" title="Sinkronkan Data Sekarang">
+                        <i class="ph-bold ph-arrows-clockwise"></i> <span class="hidden sm:inline">Sinkron</span>
+                    </button>
+                    <button onclick="openBackupModal()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold flex items-center gap-1.5 transition" title="Backup / Restore Data">
+                        <i class="ph-bold ph-cloud-arrow-up"></i> <span class="hidden sm:inline">Backup / Restore</span>
+                    </button>
+                    <button onclick="logout()" class="px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition">
+                        <i class="ph-bold ph-sign-out"></i> Keluar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigasi Staf -->
+            <nav id="staff-nav-tabs" class="bg-slate-950/60 border-t border-slate-800/80">
+                <div id="tab-buttons-container" class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-2"></div>
+            </nav>
+        </header>
+
+        <!-- Konten Dinamis -->
+        <main id="app-content" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6"></main>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- LOGIKA JAVASCRIPT & SINKRONISASI CLOUD REAL-TIME                      -->
+    <!-- ===================================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ---------------------------------------------------------------------
+        // KONSTANTA & DATA BAWAAN (TERMASUK 17 SISWA & 7 KELAS)
+        // ---------------------------------------------------------------------
+        const STORAGE_KEY = 'BIMBEL_PINTARA_DATA_V6';
+        const CUSTOM_CLOUD_KEY = 'BIMBEL_PINTARA_CUSTOM_CLOUD_CFG';
+        const SHARED_SYNC_ID_KEY = 'BIMBEL_PINTARA_SHARED_SYNC_ID';
+        const DEFAULT_SHARED_SYNC_ID = 'pintara-mranggen-demak-2026';
+
+        const GRADE_OPTIONS = [
+            'PAUD', 'TK',
+            'Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6',
+            'Kelas 7', 'Kelas 8', 'Kelas 9',
+            'Kelas 10', 'Kelas 11', 'Kelas 12'
+        ];
+
+        const TARIFF_OPTIONS = [
+            { value: 100000, label: 'Rp 100.000 (PAUD / SD 1-5 • 8x)' },
+            { value: 120000, label: 'Rp 120.000 (PAUD / SD 1-5 • 12x / Calistung)' },
+            { value: 160000, label: 'Rp 160.000 (SMP Matematika • 8x)' },
+            { value: 200000, label: 'Rp 200.000 (TKA SD/SMP / SMA Mat • 8x)' },
+            { value: 240000, label: 'Rp 240.000 (SMP 12x / TKA SMA 8x)' },
+            { value: 300000, label: 'Rp 300.000 (TKA SD/SMP / SMA Mat • 12x)' },
+            { value: 360000, label: 'Rp 360.000 (TKA SMA Matematika • 12x)' }
+        ];
+
+        const SESSION_PACKAGE_OPTIONS = [
+            { value: 8, label: 'Paket 8x Pertemuan' },
+            { value: 12, label: 'Paket 12x Pertemuan' }
+        ];
+
+        const TIME_SLOT_OPTIONS = [
+            '09.00 - 10.00', '09.30 - 10.30',
+            '10.00 - 11.00', '10.30 - 11.30',
+            '11.00 - 12.00', '11.30 - 12.30',
+            '12.00 - 13.00', '12.30 - 13.30',
+            '13.00 - 14.00', '13.30 - 14.30',
+            '14.00 - 15.00', '14.30 - 15.30',
+            '15.00 - 16.00', '15.30 - 16.30',
+            '16.00 - 17.00', '16.30 - 17.30',
+            '17.00 - 18.00', '17.30 - 18.30',
+            '18.00 - 19.00', '18.30 - 19.30',
+            '19.00 - 20.00', '19.30 - 20.30',
+            '20.00 - 21.00'
+        ];
+
+        const defaultPrograms = [
+            { id: 'PRG-1', name: 'Paud dan 1-5 SD (Calistung & All Mapel)', price8x: 100000, price12x: 120000 },
+            { id: 'PRG-2', name: 'TKA SD (Matematika)', price8x: 200000, price12x: 300000 },
+            { id: 'PRG-3', name: 'SMP (Matematika)', price8x: 160000, price12x: 240000 },
+            { id: 'PRG-4', name: 'TKA SMP (Matematika)', price8x: 200000, price12x: 300000 },
+            { id: 'PRG-5', name: 'SMA (Matematika)', price8x: 200000, price12x: 300000 },
+            { id: 'PRG-6', name: 'TKA SMA (Matematika)', price8x: 240000, price12x: 360000 }
+        ];
+
+        const defaultData = {
+            profile: {
+                name: 'Bimbel Pintara',
+                owner: 'Reni Indriyani, S. Pd., A. H.',
+                wa: '0895423088070',
+                address: 'Karangsono Krajan 09/01 Mranggen Demak',
+                hours: '09.00 - 21.00',
+                adminPin: '123456',
+                tutorPin: '1234'
+            },
+            fees: { registration: 50000, module: 50000 },
+            programs: defaultPrograms,
+            tutors: [
+                { id: 'T001', name: 'Reni Indriyani, S. Pd., A. H.', specialty: 'Matematika & TKA', phone: '0895423088070' },
+                { id: 'T002', name: 'Kak Nisa, S. Pd.', specialty: 'Calistung & SD All Mapel', phone: '081228001122' }
+            ],
+            rooms: [
+                { id: 'R001', name: 'Ruang Pintara 1', capacity: 8 },
+                { id: 'R002', name: 'Ruang Pintara 2', capacity: 8 }
+            ],
+            parents: [
+                { id: 'P001', name: 'Ibu Siti', phone: '088237005598' },
+                { id: 'P002', name: 'Ibu Koriah', phone: '089688196517' },
+                { id: 'P-1795412605708-411', name: 'Ibu dari Tazkiyah', phone: '085701899550' },
+                { id: 'P-1795412754382-399', name: 'Bapak Rusmanto', phone: '089504991231' },
+                { id: 'P-1795412794753-4', name: 'Ibu Ratna', phone: '0895424022276' },
+                { id: 'P-1795412840309-562', name: 'Ibu dari Ika', phone: '089655160302' },
+                { id: 'P-1795412897638-735', name: 'Ibu Lurah', phone: '081338843347' },
+                { id: 'P-1795413002094-928', name: 'Pak Muh Sobirin', phone: '08980746633' },
+                { id: 'P-1795413216473-666', name: 'Ibu Eka', phone: '089681941088' },
+                { id: 'P-1795413288962-719', name: 'Ibu Tun', phone: '089654977047' },
+                { id: 'P-1795413310960-746', name: 'Bu Tun', phone: '089654977047' },
+                { id: 'P-1795413377206-117', name: 'Bu Santi', phone: '089681929497' },
+                { id: 'P-1795413444455-79', name: 'Ibu dari Syafira', phone: '085702208995' },
+                { id: 'P-1795413524737-534', name: 'Ibu Layla', phone: '088215589277' },
+                { id: 'P-1795413594285-351', name: 'Ibu dari Hana', phone: '089607543275' },
+                { id: 'P-1795413680421-164', name: 'Ibu Renny', phone: '0895602905544' }
+            ],
+            students: [
+                { id: 'S002', name: 'Khilda', grade: 'TK', programName: 'Calistung', tariff: 120000, sessionPackage: 12, packageType: 'Bulanan', parentId: 'P002', classId: 'K-32844', classIds: ['K-32844'], classSlots: {}, status: 'Aktif', joinDate: '2026-10-12' },
+                { id: 'S003', name: 'Rifki', grade: 'Kelas 2', programName: 'All Mapel', tariff: 100000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P001', classId: 'K-32844', classIds: ['K-32844'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-02' },
+                { id: 'S-1795412754382-223', name: 'Nabila', grade: 'Kelas 2', programName: 'All Mapel', tariff: 100000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795412754382-399', classId: 'K-32844', classIds: ['K-32844'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795412794753-430', name: 'Gina', grade: 'Kelas 6', programName: 'TKA', tariff: 300000, sessionPackage: 12, packageType: 'Bulanan', parentId: 'P-1795412794753-4', classId: 'K-53090', classIds: ['K-53090'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795412840309-402', name: 'Ika', grade: 'Kelas 10', programName: 'Matematika', tariff: 200000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795412840309-562', classId: 'K-72050', classIds: ['K-72050'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795412897638-632', name: 'Adelia', grade: 'Kelas 5', programName: 'All Mapel', tariff: 240000, sessionPackage: 12, packageType: 'Bulanan', parentId: 'P-1795412897638-735', classId: 'K-75004', classIds: ['K-75004'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413002094-912', name: 'Wafi', grade: 'Kelas 5', programName: 'All Mapel', tariff: 100000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413002094-928', classId: 'K-53090', classIds: ['K-53090'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413125073-561', name: 'Kamal', grade: 'Kelas 2', programName: 'All Mapel', tariff: 100000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413002094-928', classId: 'K-32844', classIds: ['K-32844'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413216473-947', name: 'Rio', grade: 'Kelas 7', programName: 'Matematika', tariff: 160000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413216473-666', classId: 'K-53090', classIds: ['K-53090'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413288962-431', name: 'Tania', grade: 'Kelas 4', programName: 'All Mapel', tariff: 100000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413288962-719', classId: 'K-53090', classIds: ['K-53090'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413310960-256', name: 'Khansa', grade: 'Kelas 2', programName: 'All Mapel', tariff: 100000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413310960-746', classId: 'K-53090', classIds: ['K-53090'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413377206-930', name: 'Fito', grade: 'Kelas 3', programName: 'All Mapel', tariff: 100000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413377206-117', classId: 'K-75004', classIds: ['K-75004'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413444455-738', name: 'Syafira', grade: 'Kelas 4', programName: 'Calistung', tariff: 120000, sessionPackage: 12, packageType: 'Bulanan', parentId: 'P-1795413444455-79', classId: 'K-75004', classIds: ['K-75004'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413524737-193', name: 'M. Wafi', grade: 'Kelas 1', programName: 'All Mapel', tariff: 240000, sessionPackage: 12, packageType: 'Bulanan', parentId: 'P-1795413524737-534', classId: 'K-94918', classIds: ['K-94918'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413594285-921', name: 'Hana', grade: 'Kelas 2', programName: 'All Mapel', tariff: 160000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413594285-351', classId: 'K-94918', classIds: ['K-94918'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795413680421-173', name: 'Ammar', grade: 'Kelas 2', programName: 'All Mapel', tariff: 160000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795413680421-164', classId: 'K-94918', classIds: ['K-94918'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' },
+                { id: 'S-1795414175800-187', name: 'Tazkiyah', grade: 'Kelas 9', programName: 'TKA', tariff: 160000, sessionPackage: 8, packageType: 'Bulanan', parentId: 'P-1795412605708-411', classId: 'K-10746', classIds: ['K-10746'], classSlots: {}, status: 'Aktif', joinDate: '2026-11-23' }
+            ],
+            classes: [
+                { id: 'K-72050', name: 'Kelas Senin', tutorId: 'T001', room: 'Ruang Pintara 1', schedules: [{ day: 'Senin', start: '09:00', end: '21:00' }] },
+                { id: 'K-90397', name: 'Kelas Selasa', tutorId: 'T001', room: 'Ruang Pintara 1', schedules: [{ day: 'Selasa', start: '09:00', end: '21:00' }] },
+                { id: 'K-10746', name: 'Kelas Rabu', tutorId: 'T001', room: 'Ruang Pintara 1', schedules: [{ day: 'Rabu', start: '09:00', end: '21:00' }] },
+                { id: 'K-32844', name: 'Kelas Kamis', tutorId: 'T001', room: 'Ruang Pintara 1', schedules: [{ day: 'Kamis', start: '09:00', end: '21:00' }] },
+                { id: 'K-53090', name: "Kelas Jum'at", tutorId: 'T001', room: 'Ruang Pintara 1', schedules: [{ day: 'Jumat', start: '09:00', end: '21:00' }] },
+                { id: 'K-75004', name: 'Kelas Sabtu', tutorId: 'T001', room: 'Ruang Pintara 1', schedules: [{ day: 'Sabtu', start: '09:00', end: '21:00' }] },
+                { id: 'K-94918', name: 'Kelas Minggu', tutorId: 'T001', room: 'Ruang Pintara 1', schedules: [{ day: 'Minggu', start: '09:00', end: '21:00' }] }
+            ],
+            attendances: [],
+            invoices: [
+                { id: 'INV-202611-002', studentId: 'S002', month: '2026-11', description: 'SPP Paket 12x Pertemuan - Khilda', amount: 120000, paidAmount: 0, status: 'Belum Bayar', paidDate: '', proofNote: '', milestoneSeq: 1 }
+            ],
+            announcements: [
+                {
+                    id: 'ANN-01',
+                    date: '2026-11-23',
+                    title: 'Jadwal Bimbingan Belajar Aktif Senin – Minggu',
+                    content: 'Sesi pembelajaran tersedia mulai pukul 09.00–21.00 WIB sesuai jadwal rombel masing-masing siswa.'
+                }
+            ],
+            learningMedia: [
+                {
+                    id: 'MED-002',
+                    gradeLevel: 'Kelas 6',
+                    type: 'Tautan Google Drive / PDF',
+                    title: 'Bank Soal TKA Matematika SD Lengkap Pembahasan',
+                    url: 'https://drive.google.com',
+                    fileName: 'Latihan_TKA_SD_Matematika.pdf',
+                    notes: 'Fokus materi pecahan, debit, kecepatan, dan bangun ruang.',
+                    createdAt: '2026-11-15'
+                }
+            ]
+        };
+
+        // ---------------------------------------------------------------------
+        // STATE APLIKASI & SINKRONISASI CLOUD
+        // ---------------------------------------------------------------------
+        let appData = loadInitialData();
+        let currentRole = null; // 'admin' | 'tutor' | 'parent'
+        let currentUserId = null;
+        let currentTab = 'students';
+        let selectedAttendanceClassId = '';
+        let selectedAttendanceStudentId = '';
+        let selectedParentChildId = '';
+        let selectedScheduleDayFilter = 'ALL';
+        let studentSearchQuery = '';
+        let attendanceSearchQuery = '';
+        let financeSearchQuery = '';
+        let financeStatusFilter = 'ALL';
+
+        let cloudStateDocRef = null;
+        let cloudReady = false;
+        let isApplyingRemoteSnapshot = false;
+        let saveDebounceTimer = null;
+        let lastRemoteUpdatedAt = 0;
+        let sharedSyncId = resolveSharedSyncId();
+
+        function resolveSharedSyncId() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const fromUrl = (params.get('sync') || '').trim().replace(/[^a-zA-Z0-9_-]/g, '');
+                if (fromUrl) {
+                    localStorage.setItem(SHARED_SYNC_ID_KEY, fromUrl);
+                    return fromUrl;
+                }
+                const saved = localStorage.getItem(SHARED_SYNC_ID_KEY);
+                if (saved) return saved;
+            } catch (e) {}
+            return DEFAULT_SHARED_SYNC_ID;
+        }
+
+        function setSyncBadge(status, label) {
+            const badges = [
+                document.getElementById('auth-sync-badge'),
+                document.getElementById('nav-sync-badge')
+            ].filter(Boolean);
+
+            const dotClass = status === 'live'
+                ? 'bg-emerald-400'
+                : (status === 'saving' ? 'bg-amber-400 animate-pulse' : 'bg-sky-400');
+
+            badges.forEach(b => {
+                b.innerHTML = `<span class="w-2 h-2 rounded-full ${dotClass}"></span> ${label}`;
+            });
+        }
+
+        function normalizeData(raw) {
+            const merged = {
+                ...defaultData,
+                ...(raw || {}),
+                profile: { ...defaultData.profile, ...(raw?.profile || {}) },
+                fees: { ...defaultData.fees, ...(raw?.fees || {}) },
+                programs: Array.isArray(raw?.programs) && raw.programs.length ? raw.programs : defaultData.programs,
+                tutors: Array.isArray(raw?.tutors) && raw.tutors.length ? raw.tutors : defaultData.tutors,
+                rooms: Array.isArray(raw?.rooms) && raw.rooms.length ? raw.rooms : defaultData.rooms,
+                parents: Array.isArray(raw?.parents) ? raw.parents : defaultData.parents,
+                students: Array.isArray(raw?.students) ? raw.students : defaultData.students,
+                classes: Array.isArray(raw?.classes) && raw.classes.length ? raw.classes : defaultData.classes,
+                attendances: Array.isArray(raw?.attendances) ? raw.attendances : [],
+                invoices: Array.isArray(raw?.invoices) ? raw.invoices : [],
+                announcements: Array.isArray(raw?.announcements) ? raw.announcements : [],
+                learningMedia: Array.isArray(raw?.learningMedia) ? raw.learningMedia : []
+            };
+
+            merged.students = merged.students.map(st => {
+                const cIds = Array.isArray(st.classIds) && st.classIds.length
+                    ? st.classIds
+                    : (st.classId ? [st.classId] : []);
+                return {
+                    ...st,
+                    sessionPackage: Number(st.sessionPackage) === 12 ? 12 : 8,
+                    classIds: cIds,
+                    classId: cIds[0] || '',
+                    classSlots: (st.classSlots && typeof st.classSlots === 'object') ? st.classSlots : {}
+                };
+            });
+
+            return merged;
+        }
+
+        function loadInitialData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) return normalizeData(JSON.parse(saved));
+            } catch (e) {}
+            return normalizeData(defaultData);
+        }
+
+        function persistLocalCache() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            } catch (e) {}
+        }
+
+        function getRelayEndpoint() {
+            return `https://kvdb.io/A9x7PintaraRelay2026/${encodeURIComponent(sharedSyncId)}`;
+        }
+
+        function getNtfyTopicUrl(since = 'all') {
+            const safeTopic = `bimbel_pintara_sync_${sharedSyncId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            return `https://ntfy.sh/${safeTopic}/json?poll=1&since=${since}`;
+        }
+
+        function getNtfyPublishUrl() {
+            const safeTopic = `bimbel_pintara_sync_${sharedSyncId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            return `https://ntfy.sh/${safeTopic}`;
+        }
+
+        async function pushToPublicRelay(payloadStr) {
+            let synced = false;
+
+            // Jalur 1: ntfy.sh CORS-enabled message stream (sangat stabil di seluruh provider HP Indonesia & Netlify)
+            try {
+                const resNtfy = await fetch(getNtfyPublishUrl(), {
+                    method: 'POST',
+                    headers: {
+                        'Title': 'PINTARA_SYNC',
+                        'Cache': 'yes'
+                    },
+                    body: payloadStr
+                });
+                if (resNtfy.ok) synced = true;
+            } catch (e) {}
+
+            // Jalur 2: kvdb.io key-value store
+            try {
+                const resKv = await fetch(getRelayEndpoint(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: payloadStr
+                });
+                if (resKv.ok) synced = true;
+            } catch (e) {}
+
+            if (synced) {
+                setSyncBadge('live', 'Tersinkron Live');
+            } else {
+                setSyncBadge('local', 'Tersimpan Lokal');
+            }
+            return synced;
+        }
+
+        async function pullFromPublicRelay(silent = true) {
+            if (isApplyingRemoteSnapshot) return false;
+            let gotRemote = false;
+
+            // Cek Jalur 1: ntfy.sh cached stream
+            try {
+                const res = await fetch(getNtfyTopicUrl('24h'), { cache: 'no-store' });
+                if (res.ok) {
+                    const rawLines = await res.text();
+                    const lines = rawLines.trim().split('\n').filter(Boolean);
+                    for (let i = lines.length - 1; i >= 0; i--) {
+                        try {
+                            const wrapper = JSON.parse(lines[i]);
+                            if (!wrapper || !wrapper.message) continue;
+                            const parsed = JSON.parse(wrapper.message);
+                            if (parsed && parsed.data) {
+                                const remoteTs = Number(parsed.updatedAt || 0);
+                                if (remoteTs > lastRemoteUpdatedAt) {
+                                    lastRemoteUpdatedAt = remoteTs;
+                                    isApplyingRemoteSnapshot = true;
+                                    appData = normalizeData(parsed.data);
+                                    persistLocalCache();
+                                    refreshVisibleViews();
+                                    isApplyingRemoteSnapshot = false;
+                                    if (!silent) showToast('Data terbaru dari cloud berhasil dimuat!');
+                                }
+                                gotRemote = true;
+                                break;
+                            }
+                        } catch (innerErr) {}
+                    }
+                }
+            } catch (e) {}
+
+            // Cek Jalur 2: kvdb.io
+            if (!gotRemote) {
+                try {
+                    const res2 = await fetch(getRelayEndpoint(), { cache: 'no-store' });
+                    if (res2.ok) {
+                        const text = await res2.text();
+                        if (text && text.trim().length > 10) {
+                            const parsed = JSON.parse(text);
+                            if (parsed && parsed.data) {
+                                const remoteTs = Number(parsed.updatedAt || 0);
+                                if (remoteTs > lastRemoteUpdatedAt) {
+                                    lastRemoteUpdatedAt = remoteTs;
+                                    isApplyingRemoteSnapshot = true;
+                                    appData = normalizeData(parsed.data);
+                                    persistLocalCache();
+                                    refreshVisibleViews();
+                                    isApplyingRemoteSnapshot = false;
+                                    if (!silent) showToast('Data terbaru dari cloud berhasil dimuat!');
+                                }
+                                gotRemote = true;
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            setSyncBadge('live', 'Tersinkron Live');
+            return gotRemote;
+        }
+
+        async function forceSyncNow() {
+            setSyncBadge('saving', 'Menyinkronkan...');
+            const pulled = await pullFromPublicRelay(false);
+            if (!pulled) {
+                const nowTs = Date.now();
+                lastRemoteUpdatedAt = nowTs;
+                const serialized = JSON.stringify({ updatedAt: nowTs, data: appData });
+                const pushed = await pushToPublicRelay(serialized);
+                if (pushed) showToast('Data perangkat ini berhasil diunggah ke Cloud!');
+                else showToast('Gagal terhubung ke jaringan internet.', 'error');
+            }
+        }
+
+        function saveData(immediate = false) {
+            persistLocalCache();
+            if (isApplyingRemoteSnapshot) return;
+
+            const nowTs = Date.now();
+            lastRemoteUpdatedAt = nowTs;
+            setSyncBadge('saving', 'Menyimpan...');
+
+            const serialized = JSON.stringify({ updatedAt: nowTs, data: appData });
+
+            const doPush = async () => {
+                if (cloudReady && cloudStateDocRef) {
+                    try {
+                        await setDoc(cloudStateDocRef, { payload: serialized, updatedAt: nowTs }, { merge: true });
+                        setSyncBadge('live', 'Tersinkron Live');
+                    } catch (e) {}
+                }
+                await pushToPublicRelay(serialized);
+            };
+
+            clearTimeout(saveDebounceTimer);
+            if (immediate) {
+                doPush();
+            } else {
+                saveDebounceTimer = setTimeout(doPush, 120);
+            }
+        }
+
+        async function initCloudSync() {
+            let firebaseCfg = null;
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    firebaseCfg = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+                } else {
+                    const customRaw = localStorage.getItem(CUSTOM_CLOUD_KEY);
+                    if (customRaw) firebaseCfg = JSON.parse(customRaw);
+                }
+            } catch (e) {}
+
+            if (firebaseCfg && firebaseCfg.apiKey) {
+                try {
+                    const app = initializeApp(firebaseCfg);
+                    const auth = getAuth(app);
+                    const db = getFirestore(app);
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'bimbel-pintara-prod';
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (!user) return;
+                        cloudStateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'bimbel_state', sharedSyncId);
+                        cloudReady = true;
+                        setSyncBadge('live', 'Tersinkron Live');
+
+                        onSnapshot(cloudStateDocRef, (snap) => {
+                            if (!snap.exists()) return;
+                            const docData = snap.data();
+                            if (!docData || !docData.payload) return;
+                            try {
+                                const parsed = JSON.parse(docData.payload);
+                                const remoteTs = Number(parsed.updatedAt || docData.updatedAt || 0);
+                                if (remoteTs > lastRemoteUpdatedAt && parsed.data) {
+                                    lastRemoteUpdatedAt = remoteTs;
+                                    isApplyingRemoteSnapshot = true;
+                                    appData = normalizeData(parsed.data);
+                                    persistLocalCache();
+                                    refreshVisibleViews();
+                                    isApplyingRemoteSnapshot = false;
+                                }
+                            } catch (e) {}
+                        });
+                    });
+                    return;
+                } catch (e) {
+                    console.warn('Fallback ke relay sync:', e);
+                }
+            }
+
+            // Sinkronisasi otomatis via Public Relay untuk hosting mandiri / HP orang tua
+            const hasCloudData = await pullFromPublicRelay(true);
+            if (!hasCloudData) {
+                // Jika ruang cloud masih kosong, unggah data awal perangkat ini agar HP lain bisa langsung menariknya
+                const initTs = Date.now();
+                lastRemoteUpdatedAt = initTs;
+                await pushToPublicRelay(JSON.stringify({ updatedAt: initTs, data: appData }));
+            }
+            setSyncBadge('live', 'Tersinkron Live');
+            setInterval(() => pullFromPublicRelay(true), 6000);
+        }
+
+        // ---------------------------------------------------------------------
+        // UTILITAS UMUM, FORMAT & MODAL
+        // ---------------------------------------------------------------------
+        function formatRupiah(num) {
+            return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+        }
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? 'bg-rose-600' : 'bg-slate-900 border border-amber-400/40';
+            toast.className = `${bg} text-white px-4 py-3 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-fade-in`;
+            toast.innerHTML = `<i class="ph-fill ${type === 'error' ? 'ph-warning-circle text-rose-200' : 'ph-check-circle text-amber-400'} text-base"></i><span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.25s';
+                setTimeout(() => toast.remove(), 260);
+            }, 3200);
+        }
+
+        function openModal(htmlContent) {
+            const modal = document.getElementById('global-modal');
+            const box = document.getElementById('global-modal-box');
+            box.innerHTML = htmlContent;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('global-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openPhotoLightbox(src, caption = '') {
+            if (!src) return;
+            const lb = document.getElementById('photo-lightbox');
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox-caption').textContent = caption || 'Dokumentasi Kegiatan Belajar';
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
+        }
+
+        function closePhotoLightbox() {
+            const lb = document.getElementById('photo-lightbox');
+            lb.classList.add('hidden');
+            lb.classList.remove('flex');
+        }
+
+        // ---------------------------------------------------------------------
+        // PERHITUNGAN KEHADIRAN & INVOICE OTOMATIS PER PAKET (8X / 12X)
+        // ---------------------------------------------------------------------
+        function getStudentAttendanceStats(studentId) {
+            const st = appData.students.find(s => s.id === studentId);
+            const targetPkg = st && Number(st.sessionPackage) === 12 ? 12 : 8;
+            let totalHadir = 0;
+
+            appData.attendances.forEach(att => {
+                if (att.studentId === studentId) {
+                    if ((att.status || 'Hadir') === 'Hadir') totalHadir++;
+                } else if (Array.isArray(att.records)) {
+                    const rec = att.records.find(r => r.studentId === studentId && r.status === 'Hadir');
+                    if (rec) totalHadir++;
+                }
+            });
+
+            const completedCycles = Math.floor(totalHadir / targetPkg);
+            const currentCycleCount = totalHadir % targetPkg;
+            return { totalHadir, targetPkg, completedCycles, currentCycleCount };
+        }
+
+        function syncSessionMilestoneInvoices(studentId) {
+            const st = appData.students.find(s => s.id === studentId);
+            if (!st) return false;
+            const stats = getStudentAttendanceStats(studentId);
+            if (stats.completedCycles < 1) return false;
+
+            let createdAny = false;
+            for (let seq = 1; seq <= stats.completedCycles; seq++) {
+                const alreadyExists = appData.invoices.some(inv =>
+                    inv.studentId === studentId && Number(inv.milestoneSeq || 0) === seq
+                );
+                if (!alreadyExists) {
+                    const nowMonth = new Date().toISOString().slice(0, 7);
+                    appData.invoices.unshift({
+                        id: `INV-${nowMonth.replace('-', '')}-${String(Math.floor(100 + Math.random() * 900))}`,
+                        studentId: st.id,
+                        month: nowMonth,
+                        description: `SPP Paket ${stats.targetPkg}x Pertemuan (Siklus ke-${seq}) - ${st.name}`,
+                        amount: Number(st.tariff || 100000),
+                        paidAmount: 0,
+                        status: 'Belum Bayar',
+                        paidDate: '',
+                        proofNote: '',
+                        milestoneSeq: seq
+                    });
+                    createdAny = true;
+                }
+            }
+            return createdAny;
+        }
+
+        function runAutoGenerateAllMilestoneInvoices() {
+            let count = 0;
+            appData.students.filter(s => s.status === 'Aktif').forEach(st => {
+                if (syncSessionMilestoneInvoices(st.id)) count++;
+            });
+            saveData();
+            renderContent();
+            if (count > 0) {
+                showToast(`${count} tagihan paket 8x/12x pertemuan berhasil diterbitkan!`);
+            } else {
+                showToast('Semua siswa yang mencapai target 8x/12x sudah memiliki tagihan.');
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // INISIALISASI LAYAR AWAL & LOGIN / LOGOUT
+        // ---------------------------------------------------------------------
+        function applyProfileBranding() {
+            const p = appData.profile;
+            const elAuthName = document.getElementById('auth-brand-name');
+            const elAuthOwner = document.getElementById('auth-brand-owner');
+            const elAuthAddr = document.getElementById('auth-brand-address');
+            const elAuthWa = document.getElementById('auth-wa-display');
+            const elAuthHours = document.getElementById('auth-hours-display');
+            const elNavName = document.getElementById('nav-brand-name');
+            const elNavSub = document.getElementById('nav-subtitle');
+
+            if (elAuthName) elAuthName.textContent = p.name;
+            if (elAuthOwner) elAuthOwner.textContent = `Owner: ${p.owner}`;
+            if (elAuthAddr) elAuthAddr.innerHTML = `<i class="ph-fill ph-map-pin text-amber-400"></i> ${p.address} • Buka ${p.hours} WIB`;
+            if (elAuthWa) elAuthWa.textContent = p.wa;
+            if (elAuthHours) elAuthHours.textContent = p.hours;
+            if (elNavName) elNavName.textContent = p.name;
+            if (elNavSub) elNavSub.textContent = p.address;
+        }
+
+        function populateRegistrationDropdowns() {
+            const gradeEl = document.getElementById('reg-grade');
+            const progEl = document.getElementById('reg-program');
+            const tariffEl = document.getElementById('reg-tariff');
+            if (!gradeEl || !progEl || !tariffEl) return;
+
+            gradeEl.innerHTML = GRADE_OPTIONS.map(g => `<option value="${g}">${g}</option>`).join('');
+            progEl.innerHTML = appData.programs.map(pr => `<option value="${pr.name}">${pr.name}</option>`).join('');
+            tariffEl.innerHTML = TARIFF_OPTIONS.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+            updatePublicPricePreview();
+        }
+
+        function populateTutorDropdown() {
+            const sel = document.getElementById('staff-tutor-select');
+            if (!sel) return;
+            sel.innerHTML = appData.tutors.map(t => `<option value="${t.id}">${t.name} (${t.specialty})</option>`).join('');
+        }
+
+        function initAuthScreen() {
+            applyProfileBranding();
+            populateRegistrationDropdowns();
+            populateTutorDropdown();
+        }
+
+        function showAuthPanel(panel) {
+            const pParent = document.getElementById('panel-parent-login');
+            const pReg = document.getElementById('panel-public-register');
+            const bParent = document.getElementById('btn-panel-parent');
+            const bReg = document.getElementById('btn-panel-register');
+
+            if (panel === 'register') {
+                pParent.classList.add('hidden');
+                pReg.classList.remove('hidden');
+                bReg.className = 'p-4 rounded-2xl bg-amber-400 text-slate-950 font-bold text-left shadow-lg transition flex items-center justify-between';
+                bParent.className = 'p-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-left transition flex items-center justify-between';
+            } else {
+                pReg.classList.add('hidden');
+                pParent.classList.remove('hidden');
+                bParent.className = 'p-4 rounded-2xl bg-amber-400 text-slate-950 font-bold text-left shadow-lg transition flex items-center justify-between';
+                bReg.className = 'p-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-left transition flex items-center justify-between';
+            }
+        }
+
+        function updatePublicPricePreview() {
+            const box = document.getElementById('reg-price-preview');
+            if (!box) return;
+            const pkg = Number(document.getElementById('reg-session-package')?.value || 8);
+            const tariff = Number(document.getElementById('reg-tariff')?.value || 100000);
+            const regFee = Number(appData.fees.registration || 0);
+            const modFee = Number(appData.fees.module || 0);
+            const initialTotal = regFee + modFee;
+
+            box.innerHTML = `
+                <div class="font-bold text-indigo-950 mb-1">Rincian Biaya & Skema Tagihan:</div>
+                <div>• Biaya Pendaftaran + Modul Awal: <strong>${formatRupiah(initialTotal)}</strong> (${formatRupiah(regFee)} + ${formatRupiah(modFee)})</div>
+                <div>• SPP Paket ${pkg}x Pertemuan: <strong>${formatRupiah(tariff)}</strong> (Tagihan otomatis terbit di Portal Orang Tua setelah mencapai <strong>${pkg}x kehadiran</strong>)</div>
+            `;
+        }
+
+        function handlePublicRegistration(e) {
+            e.preventDefault();
+            const studentName = document.getElementById('reg-student-name').value.trim();
+            const grade = document.getElementById('reg-grade').value;
+            const programName = document.getElementById('reg-program').value;
+            const sessionPackage = Number(document.getElementById('reg-session-package').value || 8);
+            const tariff = Number(document.getElementById('reg-tariff').value || 100000);
+            const parentName = document.getElementById('reg-parent-name').value.trim();
+            const parentPhone = document.getElementById('reg-parent-phone').value.trim().replace(/\s+/g, '');
+
+            if (!studentName || !parentName || !parentPhone) {
+                return showToast('Lengkapi semua kolom wajib pendaftaran!', 'error');
+            }
+
+            let parent = appData.parents.find(p => p.phone.replace(/\D/g, '') === parentPhone.replace(/\D/g, ''));
+            if (!parent) {
+                parent = { id: 'P-' + Date.now(), name: parentName, phone: parentPhone };
+                appData.parents.push(parent);
+            }
+
+            const defaultClassId = appData.classes[0]?.id || '';
+            const newStudent = {
+                id: 'S-' + Date.now(),
+                name: studentName,
+                grade,
+                programName,
+                tariff,
+                sessionPackage,
+                packageType: 'Bulanan',
+                parentId: parent.id,
+                classId: defaultClassId,
+                classIds: defaultClassId ? [defaultClassId] : [],
+                classSlots: {},
+                status: 'Aktif',
+                joinDate: new Date().toISOString().slice(0, 10)
+            };
+            appData.students.push(newStudent);
+
+            const regTotal = Number(appData.fees.registration || 0) + Number(appData.fees.module || 0);
+            if (regTotal > 0) {
+                const nowMonth = new Date().toISOString().slice(0, 7);
+                appData.invoices.unshift({
+                    id: `INV-REG-${String(Math.floor(100 + Math.random() * 900))}`,
+                    studentId: newStudent.id,
+                    month: nowMonth,
+                    description: `Biaya Pendaftaran & Modul Awal - ${studentName}`,
+                    amount: regTotal,
+                    paidAmount: 0,
+                    status: 'Belum Bayar',
+                    paidDate: '',
+                    proofNote: '',
+                    milestoneSeq: 0
+                });
+            }
+
+            saveData();
+            e.target.reset();
+            showAuthPanel('parent');
+            document.getElementById('parent-login-phone').value = parentPhone;
+            showToast(`Pendaftaran ${studentName} berhasil! Silakan buka Portal Orang Tua.`);
+        }
+
+        function toggleTutorSelect() {
+            const role = document.getElementById('staff-role-select').value;
+            const wrapper = document.getElementById('staff-tutor-wrapper');
+            if (role === 'tutor') wrapper.classList.remove('hidden');
+            else wrapper.classList.add('hidden');
+        }
+
+        function handleStaffLogin(e) {
+            e.preventDefault();
+            const role = document.getElementById('staff-role-select').value;
+            const pin = document.getElementById('staff-pin-input').value.trim();
+
+            if (role === 'admin') {
+                if (pin !== String(appData.profile.adminPin)) {
+                    return showToast('PIN Owner / Admin salah!', 'error');
+                }
+                currentRole = 'admin';
+                currentUserId = 'ADMIN';
+                currentTab = 'students';
+            } else {
+                if (pin !== String(appData.profile.tutorPin)) {
+                    return showToast('PIN Tutor salah!', 'error');
+                }
+                currentRole = 'tutor';
+                currentUserId = document.getElementById('staff-tutor-select').value || appData.tutors[0]?.id;
+                currentTab = 'classes';
+            }
+
+            document.getElementById('staff-pin-input').value = '';
+            enterMainApp();
+            showToast(`Selamat datang di Dasbor ${currentRole === 'admin' ? 'Owner' : 'Tutor'}!`);
+        }
+
+        function loginAsParent(e) {
+            e.preventDefault();
+            const rawInput = document.getElementById('parent-login-phone').value.trim();
+            const cleanInput = rawInput.replace(/\D/g, '');
+            if (!cleanInput) return showToast('Masukkan nomor WhatsApp yang terdaftar!', 'error');
+
+            const normalizePhone = (ph) => {
+                let d = String(ph || '').replace(/\D/g, '');
+                if (d.startsWith('62')) d = '0' + d.slice(2);
+                return d;
+            };
+
+            const targetNorm = normalizePhone(cleanInput);
+            const matchedParents = appData.parents.filter(p => normalizePhone(p.phone) === targetNorm);
+
+            if (matchedParents.length === 0) {
+                return showToast('Nomor WhatsApp belum terdaftar. Hubungi Admin Bimbel Pintara.', 'error');
+            }
+
+            const parentIds = matchedParents.map(p => p.id);
+            const children = appData.students.filter(s => parentIds.includes(s.parentId));
+            if (children.length === 0) {
+                return showToast('Data siswa untuk nomor wali ini belum ditemukan.', 'error');
+            }
+
+            currentRole = 'parent';
+            currentUserId = targetNorm;
+            selectedParentChildId = children[0].id;
+            enterMainApp();
+            showToast(`Portal Orang Tua terbuka (${matchedParents[0].name})`);
+        }
+
+        function logout() {
+            currentRole = null;
+            currentUserId = null;
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('flex');
+            document.getElementById('auth-screen').classList.remove('hidden');
+            initAuthScreen();
+        }
+
+        function enterMainApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            const mainApp = document.getElementById('main-app');
+            mainApp.classList.remove('hidden');
+            mainApp.classList.add('flex');
+
+            const badge = document.getElementById('nav-role-badge');
+            const navTabs = document.getElementById('staff-nav-tabs');
+
+            if (currentRole === 'parent') {
+                badge.textContent = 'Portal Orang Tua';
+                navTabs.classList.add('hidden');
+            } else {
+                badge.textContent = currentRole === 'admin' ? 'Owner / Admin' : 'Tutor Pengajar';
+                navTabs.classList.remove('hidden');
+                renderStaffTabs();
+            }
+
+            renderContent();
+        }
+
+        // ---------------------------------------------------------------------
+        // NAVIGASI TAB STAF
+        // ---------------------------------------------------------------------
+        function getAvailableTabs() {
+            if (currentRole === 'admin') {
+                return [
+                    { id: 'students', label: '1. Data Siswa', icon: 'ph-users' },
+                    { id: 'classes', label: '2. Rombel & Jadwal', icon: 'ph-calendar-check' },
+                    { id: 'attendance', label: '3. Absensi & Evaluasi', icon: 'ph-camera' },
+                    { id: 'media', label: '4. Media Belajar', icon: 'ph-books' },
+                    { id: 'finance', label: '5. Keuangan & SPP', icon: 'ph-wallet' },
+                    { id: 'reports', label: '6. Laporan & Pengaturan', icon: 'ph-gear' }
+                ];
+            }
+            return [
+                { id: 'students', label: '1. Data Siswa', icon: 'ph-users' },
+                { id: 'classes', label: '2. Rombel & Jadwal', icon: 'ph-calendar-check' },
+                { id: 'attendance', label: '3. Absensi & Evaluasi', icon: 'ph-camera' },
+                { id: 'media', label: '4. Media Belajar', icon: 'ph-books' }
+            ];
+        }
+
+        function renderStaffTabs() {
+            const container = document.getElementById('tab-buttons-container');
+            if (!container) return;
+            const tabs = getAvailableTabs();
+            container.innerHTML = tabs.map(t => {
+                const active = t.id === currentTab;
+                return `
+                    <button onclick="switchTab('${t.id}')" class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition ${active ? 'bg-amber-400 text-slate-950 shadow-xs' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+                        <i class="ph-bold ${t.icon}"></i> ${t.label}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            renderStaffTabs();
+            renderContent();
+        }
+
+        function renderContent() {
+            const container = document.getElementById('app-content');
+            if (!container) return;
+
+            if (currentRole === 'parent') {
+                container.innerHTML = renderParentPortal();
+                return;
+            }
+
+            if (currentTab === 'students') container.innerHTML = renderStudentsTab();
+            else if (currentTab === 'classes') container.innerHTML = renderClassesTab();
+            else if (currentTab === 'attendance') container.innerHTML = renderAttendanceTab();
+            else if (currentTab === 'media') container.innerHTML = renderMediaTab();
+            else if (currentTab === 'finance') container.innerHTML = renderFinanceTab();
+            else if (currentTab === 'reports') container.innerHTML = renderReportsTab();
+        }
+
+        // ---------------------------------------------------------------------
+        // FUNGSI HELPER WHATSAPP & KOMPRESI FOTO
+        // ---------------------------------------------------------------------
+        function compressAttendancePhoto(file) {
+            return new Promise((resolve) => {
+                if (!file) return resolve('');
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxW = 560;
+                        const scale = img.width > maxW ? maxW / img.width : 1;
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.58));
+                    };
+                    img.onerror = () => resolve('');
+                    img.src = ev.target.result;
+                };
+                reader.onerror = () => resolve('');
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function formatWaPhone(rawPhone) {
+            let digits = String(rawPhone || '').replace(/\D/g, '');
+            if (!digits) return '';
+            if (digits.startsWith('0')) digits = '62' + digits.slice(1);
+            else if (!digits.startsWith('62')) digits = '62' + digits;
+            return digits;
+        }
+
+        function openWhatsAppMessage(phone, message) {
+            const formatted = formatWaPhone(phone);
+            if (!formatted) return showToast('Nomor WhatsApp wali murid belum tersedia!', 'error');
+            const url = `https://wa.me/${formatted}?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank', 'noopener');
+        }
+
+        function sendInvoiceViaWA(invId) {
+            const inv = appData.invoices.find(i => i.id === invId);
+            if (!inv) return;
+            const st = appData.students.find(s => s.id === inv.studentId);
+            const parent = st ? appData.parents.find(p => p.id === st.parentId) : null;
+            if (!parent || !parent.phone) return showToast('Nomor WhatsApp wali murid tidak ditemukan!', 'error');
+            const shareUrl = `${window.location.origin}${window.location.pathname}?sync=${encodeURIComponent(sharedSyncId)}`;
+            const msg = `Assalamu'alaikum ${parent.name},\n\nBerikut rincian tagihan SPP *${appData.profile.name}* untuk ananda *${st ? st.name : 'Siswa'}*:\n• No. Invoice: ${inv.id}\n• Keterangan: ${inv.description}\n• Nominal: *${formatRupiah(inv.amount)}*\n• Status: *${inv.status}*\n\nBapak/Ibu dapat melihat progres pertemuan dan mengunduh kuitansi melalui Portal Orang Tua:\n${shareUrl}\n\nTerima kasih.\n_${appData.profile.owner}_`;
+            openWhatsAppMessage(parent.phone, msg);
+        }
+
+        function sendAttendanceReportViaWA(attId) {
+            const att = appData.attendances.find(a => a.id === attId);
+            if (!att) return;
+            const st = appData.students.find(s => s.id === att.studentId);
+            const parent = st ? appData.parents.find(p => p.id === st.parentId) : null;
+            const cls = appData.classes.find(c => c.id === att.classId);
+            if (!parent || !parent.phone) return showToast('Nomor WhatsApp wali murid tidak ditemukan!', 'error');
+            const shareUrl = `${window.location.origin}${window.location.pathname}?sync=${encodeURIComponent(sharedSyncId)}`;
+            const msg = `Assalamu'alaikum ${parent.name},\n\nLaporan belajar ananda *${st ? st.name : 'Siswa'}* di *${appData.profile.name}*:\n• Tanggal: ${att.date} (${cls ? cls.name : ''}${att.sessionSlot ? ' • ' + att.sessionSlot : ''})\n• Kehadiran: *${att.status || 'Hadir'}*\n• Materi: ${att.topic || '-'}\n• Evaluasi: ${att.evaluation || '-'}\n\nFoto dokumentasi kegiatan belajar ananda dapat dilihat & diunduh di Portal Orang Tua:\n${shareUrl}\n\nTerima kasih.`;
+            openWhatsAppMessage(parent.phone, msg);
+        }
+
+        function previewAttendancePhotoInput(input) {
+            const preview = document.getElementById('att-photo-preview');
+            if (!preview) return;
+            const file = input.files?.[0];
+            if (!file) {
+                preview.classList.add('hidden');
+                preview.src = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // =====================================================================
+        // TAB 1: DATA SISWA & WALI MURID
+        // =====================================================================
+        function renderStudentsTab() {
+            const activeStudents = appData.students.filter(s => s.status === 'Aktif');
+            const q = studentSearchQuery.trim().toLowerCase();
+            const filteredStudents = appData.students.filter(s => {
+                if (!q) return true;
+                const parent = appData.parents.find(p => p.id === s.parentId);
+                return (
+                    (s.name || '').toLowerCase().includes(q) ||
+                    (s.grade || '').toLowerCase().includes(q) ||
+                    (s.programName || '').toLowerCase().includes(q) ||
+                    (parent?.name || '').toLowerCase().includes(q) ||
+                    (parent?.phone || '').includes(q)
+                );
+            });
+
+            return `
+                <div class="space-y-5 animate-fade-in">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-extrabold text-slate-900">Manajemen Siswa & Wali Murid (${activeStudents.length} Siswa Aktif)</h2>
+                            <p class="text-xs text-slate-500">Atur data siswa, paket pertemuan (8x / 12x), tarif, serta penempatan multi-rombel & jam sesi.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="relative">
+                                <i class="ph-bold ph-magnifying-glass text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xs"></i>
+                                <input type="text" value="${studentSearchQuery}" oninput="studentSearchQuery=this.value; renderContent()" placeholder="Cari siswa / wali / kelas..." class="pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 outline-none w-48 sm:w-56">
+                            </div>
+                            ${currentRole === 'admin' ? `
+                                <button onclick="openAddStudentModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                                    <i class="ph-bold ph-user-plus"></i> Tambah Siswa
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[11px]">
+                                        <th class="p-3.5 font-bold">Nama Siswa</th>
+                                        <th class="p-3.5 font-bold">Kelas / Program</th>
+                                        <th class="p-3.5 font-bold">Paket & Tarif</th>
+                                        <th class="p-3.5 font-bold">Progres Hadir</th>
+                                        <th class="p-3.5 font-bold">Rombel & Jam Sesi</th>
+                                        <th class="p-3.5 font-bold">Wali Murid</th>
+                                        ${currentRole === 'admin' ? '<th class="p-3.5 font-bold text-right">Aksi</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredStudents.length === 0 ? `
+                                        <tr><td colspan="7" class="p-6 text-center text-slate-400">Tidak ada siswa yang cocok dengan kata kunci pencarian.</td></tr>
+                                    ` : filteredStudents.map(s => {
+                                        const parent = appData.parents.find(p => p.id === s.parentId);
+                                        const stats = getStudentAttendanceStats(s.id);
+                                        const classBadges = (s.classIds || []).map(cid => {
+                                            const cls = appData.classes.find(c => c.id === cid);
+                                            const slot = s.classSlots && s.classSlots[cid] ? ` (${s.classSlots[cid]})` : '';
+                                            return `<span class="inline-block px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold text-[11px] mr-1 mb-1">${cls ? cls.name : cid}${slot}</span>`;
+                                        }).join('') || '<span class="text-slate-400 italic">Belum diatur</span>';
+
+                                        return `
+                                            <tr class="hover:bg-slate-50/70">
+                                                <td class="p-3.5">
+                                                    <div class="font-extrabold text-slate-900">${s.name}</div>
+                                                    <span class="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${s.status}</span>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <div class="font-bold text-slate-800">${s.grade}</div>
+                                                    <div class="text-slate-500">${s.programName}</div>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <div class="font-extrabold text-indigo-700">${formatRupiah(s.tariff)}</div>
+                                                    <div class="text-[11px] text-slate-500">Paket ${stats.targetPkg}x Pertemuan</div>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-extrabold text-[11px]">
+                                                        ${stats.currentCycleCount} / ${stats.targetPkg} Hadir
+                                                    </span>
+                                                    <div class="text-[10px] text-slate-400 mt-0.5">Total: ${stats.totalHadir}x hadir</div>
+                                                </td>
+                                                <td class="p-3.5 max-w-xs">${classBadges}</td>
+                                                <td class="p-3.5">
+                                                    <div class="font-bold text-slate-800">${parent ? parent.name : '-'}</div>
+                                                    <div class="text-slate-500">${parent ? parent.phone : '-'}</div>
+                                                </td>
+                                                ${currentRole === 'admin' ? `
+                                                    <td class="p-3.5 text-right whitespace-nowrap space-x-1">
+                                                        <button onclick="openEditStudentModal('${s.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 font-bold">Edit</button>
+                                                        <button onclick="deleteStudent('${s.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold">Hapus</button>
+                                                    </td>
+                                                ` : ''}
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStudentRombelCheckboxes(selectedIds = [], selectedSlots = {}) {
+            return appData.classes.map(cls => {
+                const checked = selectedIds.includes(cls.id);
+                const curSlot = selectedSlots[cls.id] || '';
+                return `
+                    <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label class="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                            <input type="checkbox" name="st-rombel-chk" value="${cls.id}" ${checked ? 'checked' : ''} class="rounded text-indigo-600">
+                            <span>${cls.name}</span>
+                        </label>
+                        <select id="st-slot-${cls.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-[11px] font-medium">
+                            <option value="">-- Pilih Jam Sesi (09.00-21.00) --</option>
+                            ${TIME_SLOT_OPTIONS.map(slot => `<option value="${slot}" ${curSlot === slot ? 'selected' : ''}>${slot}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openAddStudentModal() {
+            openModal(`
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-extrabold text-slate-900">Tambah Siswa Baru</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+                </div>
+                <form onsubmit="saveNewStudent(event)" class="space-y-3 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Nama Siswa *</label>
+                            <input type="text" id="new-st-name" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Jenjang / Kelas *</label>
+                            <select id="new-st-grade" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                ${GRADE_OPTIONS.map(g => `<option value="${g}">${g}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Program *</label>
+                            <input type="text" id="new-st-program" value="All Mapel" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Paket Pertemuan *</label>
+                            <select id="new-st-pkg" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                ${SESSION_PACKAGE_OPTIONS.map(p => `<option value="${p.value}">${p.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block font-semibold text-slate-700 mb-1">Tarif SPP Paket *</label>
+                            <select id="new-st-tariff" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                ${TARIFF_OPTIONS.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Nama Wali Murid *</label>
+                            <input type="text" id="new-st-parent" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">No. WhatsApp Wali *</label>
+                            <input type="tel" id="new-st-phone" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1.5">Penempatan Rombel & Jam Sesi:</label>
+                        <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            ${renderStudentRombelCheckboxes([appData.classes[0]?.id], {})}
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">Simpan Siswa</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        function saveNewStudent(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-st-name').value.trim();
+            const grade = document.getElementById('new-st-grade').value;
+            const programName = document.getElementById('new-st-program').value.trim();
+            const sessionPackage = Number(document.getElementById('new-st-pkg').value || 8);
+            const tariff = Number(document.getElementById('new-st-tariff').value || 100000);
+            const parentName = document.getElementById('new-st-parent').value.trim();
+            const parentPhone = document.getElementById('new-st-phone').value.trim();
+
+            const selectedIds = [];
+            const classSlots = {};
+            document.querySelectorAll('input[name="st-rombel-chk"]:checked').forEach(chk => {
+                selectedIds.push(chk.value);
+                const slotVal = document.getElementById(`st-slot-${chk.value}`)?.value || '';
+                if (slotVal) classSlots[chk.value] = slotVal;
+            });
+
+            let parent = appData.parents.find(p => p.phone.replace(/\D/g, '') === parentPhone.replace(/\D/g, ''));
+            if (!parent) {
+                parent = { id: 'P-' + Date.now(), name: parentName, phone: parentPhone };
+                appData.parents.push(parent);
+            }
+
+            appData.students.push({
+                id: 'S-' + Date.now(),
+                name,
+                grade,
+                programName,
+                tariff,
+                sessionPackage,
+                packageType: 'Bulanan',
+                parentId: parent.id,
+                classId: selectedIds[0] || '',
+                classIds: selectedIds,
+                classSlots,
+                status: 'Aktif',
+                joinDate: new Date().toISOString().slice(0, 10)
+            });
+
+            saveData();
+            closeModal();
+            renderContent();
+            showToast(`Siswa ${name} berhasil ditambahkan!`);
+        }
+
+        function openEditStudentModal(studentId) {
+            const st = appData.students.find(s => s.id === studentId);
+            if (!st) return;
+            const parent = appData.parents.find(p => p.id === st.parentId) || { name: '', phone: '' };
+
+            openModal(`
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-extrabold text-slate-900">Edit Data Siswa: ${st.name}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+                </div>
+                <form onsubmit="saveEditedStudent(event, '${st.id}')" class="space-y-3 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Nama Siswa *</label>
+                            <input type="text" id="edit-st-name" value="${st.name}" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Jenjang / Kelas *</label>
+                            <select id="edit-st-grade" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                ${GRADE_OPTIONS.map(g => `<option value="${g}" ${st.grade === g ? 'selected' : ''}>${g}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Program *</label>
+                            <input type="text" id="edit-st-program" value="${st.programName}" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Paket Pertemuan *</label>
+                            <select id="edit-st-pkg" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                ${SESSION_PACKAGE_OPTIONS.map(p => `<option value="${p.value}" ${Number(st.sessionPackage) === p.value ? 'selected' : ''}>${p.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Tarif SPP Paket *</label>
+                            <select id="edit-st-tariff" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                ${TARIFF_OPTIONS.map(t => `<option value="${t.value}" ${Number(st.tariff) === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}
+                                ${!TARIFF_OPTIONS.some(t => t.value === Number(st.tariff)) ? `<option value="${st.tariff}" selected>${formatRupiah(st.tariff)}</option>` : ''}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Status Keaktifan</label>
+                            <select id="edit-st-status" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                <option value="Aktif" ${st.status === 'Aktif' ? 'selected' : ''}>Aktif</option>
+                                <option value="Nonaktif" ${st.status !== 'Aktif' ? 'selected' : ''}>Nonaktif</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Nama Wali Murid *</label>
+                            <input type="text" id="edit-st-parent" value="${parent.name}" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">No. WhatsApp Wali *</label>
+                            <input type="tel" id="edit-st-phone" value="${parent.phone}" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1.5">Penempatan Rombel & Jam Sesi:</label>
+                        <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            ${renderStudentRombelCheckboxes(st.classIds || [], st.classSlots || {})}
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">Simpan Perubahan</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        function saveEditedStudent(e, studentId) {
+            e.preventDefault();
+            const st = appData.students.find(s => s.id === studentId);
+            if (!st) return;
+
+            st.name = document.getElementById('edit-st-name').value.trim();
+            st.grade = document.getElementById('edit-st-grade').value;
+            st.programName = document.getElementById('edit-st-program').value.trim();
+            st.sessionPackage = Number(document.getElementById('edit-st-pkg').value || 8);
+            st.tariff = Number(document.getElementById('edit-st-tariff').value || 100000);
+            st.status = document.getElementById('edit-st-status').value;
+
+            const parentName = document.getElementById('edit-st-parent').value.trim();
+            const parentPhone = document.getElementById('edit-st-phone').value.trim();
+            const parent = appData.parents.find(p => p.id === st.parentId);
+            if (parent) {
+                parent.name = parentName;
+                parent.phone = parentPhone;
+            }
+
+            const selectedIds = [];
+            const classSlots = {};
+            document.querySelectorAll('input[name="st-rombel-chk"]:checked').forEach(chk => {
+                selectedIds.push(chk.value);
+                const slotVal = document.getElementById(`st-slot-${chk.value}`)?.value || '';
+                if (slotVal) classSlots[chk.value] = slotVal;
+            });
+            st.classIds = selectedIds;
+            st.classId = selectedIds[0] || '';
+            st.classSlots = classSlots;
+
+            saveData();
+            closeModal();
+            renderContent();
+            showToast(`Data ${st.name} berhasil diperbarui!`);
+        }
+
+        function deleteStudent(studentId) {
+            const st = appData.students.find(s => s.id === studentId);
+            if (!st) return;
+            openModal(`
+                <div class="space-y-4 text-xs">
+                    <h3 class="text-base font-extrabold text-slate-900">Hapus Data Siswa?</h3>
+                    <p class="text-slate-600">Apakah Anda yakin ingin menghapus data siswa <strong>${st.name}</strong>?</p>
+                    <div class="flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button onclick="confirmDeleteStudent('${st.id}')" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">Ya, Hapus</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function confirmDeleteStudent(studentId) {
+            appData.students = appData.students.filter(s => s.id !== studentId);
+            saveData();
+            closeModal();
+            renderContent();
+            showToast('Data siswa berhasil dihapus.');
+        }
+
+        // =====================================================================
+        // TAB 2: ROMBEL & JADWAL KELAS (SENIN - MINGGU & SESI 09.00 - 21.00)
+        // =====================================================================
+        function renderClassesTab() {
+            const visibleClasses = selectedScheduleDayFilter === 'ALL'
+                ? appData.classes
+                : appData.classes.filter(c => c.id === selectedScheduleDayFilter);
+
+            return `
+                <div class="space-y-5 animate-fade-in">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-extrabold text-slate-900">Rombel & Jadwal Sesi Belajar (Senin – Minggu)</h2>
+                            <p class="text-xs text-slate-500">Slot sesi per jam mulai pukul 09.00–10.00 s/d 20.00–21.00 serta sesi setengah jam 09.30–10.30 s/d 19.30–20.30.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button onclick="selectedScheduleDayFilter='ALL'; renderContent()" class="px-3 py-1.5 rounded-xl text-xs font-bold ${selectedScheduleDayFilter === 'ALL' ? 'bg-slate-900 text-amber-300' : 'bg-slate-100 text-slate-700'}">Semua Hari</button>
+                            ${appData.classes.map(c => `
+                                <button onclick="selectedScheduleDayFilter='${c.id}'; renderContent()" class="px-3 py-1.5 rounded-xl text-xs font-bold ${selectedScheduleDayFilter === c.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'}">${c.name.replace('Kelas ', '')}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        ${visibleClasses.map(cls => {
+                            const members = appData.students.filter(s => s.status === 'Aktif' && (s.classIds || []).includes(cls.id));
+                            const tutor = appData.tutors.find(t => t.id === cls.tutorId);
+                            return `
+                                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between space-y-4">
+                                    <div class="space-y-3">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div>
+                                                <h3 class="text-base font-extrabold text-slate-900">${cls.name}</h3>
+                                                <p class="text-xs text-slate-500">Tutor: <strong>${tutor ? tutor.name : '-'}</strong> • ${cls.room}</p>
+                                            </div>
+                                            <span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-extrabold">${members.length} Siswa</span>
+                                        </div>
+
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <div class="text-[11px] font-bold text-slate-600 mb-1.5">Pilihan Sesi Belajar Tersedia (09.00 – 21.00 WIB):</div>
+                                            <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                                                ${TIME_SLOT_OPTIONS.map(slot => {
+                                                    const countInSlot = members.filter(m => m.classSlots && m.classSlots[cls.id] === slot).length;
+                                                    return `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${countInSlot > 0 ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-white text-slate-600 border border-slate-200'}">${slot}${countInSlot > 0 ? ` (${countInSlot})` : ''}</span>`;
+                                                }).join('')}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div class="text-xs font-bold text-slate-700 mb-1.5">Daftar Siswa & Jam Sesi di ${cls.name}:</div>
+                                            ${members.length === 0 ? `<p class="text-xs text-slate-400 italic">Belum ada siswa ditempatkan di rombel ini.</p>` : `
+                                                <div class="space-y-1.5 max-h-48 overflow-y-auto">
+                                                    ${members.map(m => {
+                                                        const slot = (m.classSlots && m.classSlots[cls.id]) || 'Jam belum dipilih';
+                                                        return `
+                                                            <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 text-xs">
+                                                                <div>
+                                                                    <span class="font-bold text-slate-900">${m.name}</span>
+                                                                    <span class="text-slate-500">(${m.grade})</span>
+                                                                </div>
+                                                                <span class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-bold text-[11px]">${slot}</span>
+                                                            </div>
+                                                        `;
+                                                    }).join('')}
+                                                </div>
+                                            `}
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-2 border-t border-slate-100 flex justify-end">
+                                        <button onclick="openManageClassModal('${cls.id}')" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-indigo-800 text-amber-300 text-xs font-bold">
+                                            Atur Siswa & Jam Sesi
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function openManageClassModal(classId) {
+            const cls = appData.classes.find(c => c.id === classId);
+            if (!cls) return;
+            const activeStudents = appData.students.filter(s => s.status === 'Aktif');
+
+            openModal(`
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-extrabold text-slate-900">Atur Siswa & Jam Sesi: ${cls.name}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+                </div>
+                <form onsubmit="saveClassAssignments(event, '${cls.id}')" class="space-y-3 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Tutor Pengampu</label>
+                            <select id="cls-tutor-sel" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                                ${appData.tutors.map(t => `<option value="${t.id}" ${cls.tutorId === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Ruangan</label>
+                            <input type="text" id="cls-room-inp" value="${cls.room}" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                        ${activeStudents.map(st => {
+                            const isMember = (st.classIds || []).includes(cls.id);
+                            const curSlot = (st.classSlots && st.classSlots[cls.id]) || '';
+                            return `
+                                <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <label class="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                                        <input type="checkbox" name="cls-member-chk" value="${st.id}" ${isMember ? 'checked' : ''} class="rounded text-indigo-600">
+                                        <span>${st.name} <span class="font-normal text-slate-500">(${st.grade})</span></span>
+                                    </label>
+                                    <select id="cls-st-slot-${st.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-[11px]">
+                                        <option value="">-- Pilih Jam Sesi --</option>
+                                        ${TIME_SLOT_OPTIONS.map(slot => `<option value="${slot}" ${curSlot === slot ? 'selected' : ''}>${slot}</option>`).join('')}
+                                    </select>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">Simpan Rombel</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        function saveClassAssignments(e, classId) {
+            e.preventDefault();
+            const cls = appData.classes.find(c => c.id === classId);
+            if (!cls) return;
+            cls.tutorId = document.getElementById('cls-tutor-sel').value;
+            cls.room = document.getElementById('cls-room-inp').value.trim();
+
+            const checkedIds = new Set();
+            document.querySelectorAll('input[name="cls-member-chk"]:checked').forEach(chk => checkedIds.add(chk.value));
+
+            appData.students.forEach(st => {
+                if (!Array.isArray(st.classIds)) st.classIds = [];
+                if (!st.classSlots) st.classSlots = {};
+
+                if (checkedIds.has(st.id)) {
+                    if (!st.classIds.includes(classId)) st.classIds.push(classId);
+                    const slotVal = document.getElementById(`cls-st-slot-${st.id}`)?.value || '';
+                    if (slotVal) st.classSlots[classId] = slotVal;
+                    else delete st.classSlots[classId];
+                } else {
+                    st.classIds = st.classIds.filter(id => id !== classId);
+                    delete st.classSlots[classId];
+                }
+                st.classId = st.classIds[0] || '';
+            });
+
+            saveData();
+            closeModal();
+            renderContent();
+            showToast(`Anggota & jam sesi ${cls.name} berhasil diperbarui!`);
+        }
+
+        // =====================================================================
+        // TAB 3: ABSENSI PER SISWA, FOTO (GALERI/KAMERA), MATERI & EVALUASI
+        // =====================================================================
+        function onAttendanceClassChange(newClassId) {
+            selectedAttendanceClassId = newClassId;
+            const studentsInClass = appData.students.filter(s => s.status === 'Aktif' && (s.classIds || []).includes(newClassId));
+            selectedAttendanceStudentId = studentsInClass[0]?.id || '';
+            renderContent();
+        }
+
+        function onAttendanceStudentChange(newStudentId) {
+            selectedAttendanceStudentId = newStudentId;
+            renderContent();
+        }
+
+        function renderAttendanceTab() {
+            if (!selectedAttendanceClassId || !appData.classes.some(c => c.id === selectedAttendanceClassId)) {
+                selectedAttendanceClassId = appData.classes[0]?.id || '';
+            }
+            const currentClass = appData.classes.find(c => c.id === selectedAttendanceClassId);
+            const classStudents = appData.students.filter(s => s.status === 'Aktif' && (s.classIds || []).includes(selectedAttendanceClassId));
+
+            if (!selectedAttendanceStudentId || !classStudents.some(s => s.id === selectedAttendanceStudentId)) {
+                selectedAttendanceStudentId = classStudents[0]?.id || '';
+            }
+
+            const selectedStudent = classStudents.find(s => s.id === selectedAttendanceStudentId);
+            const studentDefaultSlot = selectedStudent && selectedStudent.classSlots ? (selectedStudent.classSlots[selectedAttendanceClassId] || '') : '';
+            const todayStr = new Date().toISOString().slice(0, 10);
+
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+                    <!-- Form Input Absensi Per Siswa -->
+                    <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900">Input Absensi, Foto & Evaluasi Per Siswa</h2>
+                            <p class="text-xs text-slate-500">Laporan tersimpan khusus untuk siswa terpilih agar privasi tiap wali murid terjaga.</p>
+                        </div>
+
+                        <form onsubmit="submitSingleStudentAttendance(event)" class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">1. Pilih Rombel Hari *</label>
+                                <select id="att-class-select" onchange="onAttendanceClassChange(this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-900">
+                                    ${appData.classes.map(c => {
+                                        const cnt = appData.students.filter(s => s.status === 'Aktif' && (s.classIds || []).includes(c.id)).length;
+                                        return `<option value="${c.id}" ${c.id === selectedAttendanceClassId ? 'selected' : ''}>${c.name} (${cnt} siswa)</option>`;
+                                    }).join('')}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">2. Pilih Nama Siswa di ${currentClass ? currentClass.name : 'Rombel'} *</label>
+                                ${classStudents.length === 0 ? `
+                                    <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 font-medium">
+                                        Belum ada siswa terdaftar di <strong>${currentClass ? currentClass.name : 'kelas ini'}</strong>. Silakan tempatkan siswa di menu Rombel terlebih dahulu.
+                                    </div>
+                                ` : `
+                                    <select id="att-student-select" onchange="onAttendanceStudentChange(this.value)" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-indigo-900">
+                                        ${classStudents.map(st => {
+                                            const stats = getStudentAttendanceStats(st.id);
+                                            return `<option value="${st.id}" ${st.id === selectedAttendanceStudentId ? 'selected' : ''}>${st.name} (${st.grade}) • Hadir ${stats.currentCycleCount}/${stats.targetPkg}</option>`;
+                                        }).join('')}
+                                    </select>
+                                `}
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Tanggal Pertemuan *</label>
+                                    <input type="date" id="att-date" value="${todayStr}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Status Kehadiran *</label>
+                                    <select id="att-status" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold">
+                                        <option value="Hadir">Hadir (Menambah Progres Paket)</option>
+                                        <option value="Izin">Izin</option>
+                                        <option value="Sakit">Sakit</option>
+                                        <option value="Alpha">Alpha</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Jam Sesi Belajar</label>
+                                <select id="att-session-slot" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                    <option value="">-- Sesuai Jadwal Siswa --</option>
+                                    ${TIME_SLOT_OPTIONS.map(slot => `<option value="${slot}" ${studentDefaultSlot === slot ? 'selected' : ''}>${slot}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Materi Pembelajaran *</label>
+                                <input type="text" id="att-topic" required placeholder="Contoh: Perkalian Pecahan & Soal Cerita" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Catatan Evaluasi Perkembangan Anak *</label>
+                                <textarea id="att-evaluation" rows="2" required placeholder="Contoh: Ananda sudah lancar berhitung mandiri, perlu latihan soal cerita." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Foto Kegiatan (Dari Galeri HP atau Kamera)</label>
+                                <input type="file" id="att-photo-file" accept="image/*" onchange="previewAttendancePhotoInput(this)" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                                <img id="att-photo-preview" src="" alt="Preview" class="hidden mt-2 h-28 w-auto rounded-xl border border-slate-200 object-cover">
+                            </div>
+
+                            <button type="submit" ${classStudents.length === 0 ? 'disabled' : ''} class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-extrabold text-xs shadow-md transition">
+                                Simpan Absensi & Laporan Siswa
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Riwayat Absensi Per Siswa -->
+                    <div class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <h3 class="text-base font-extrabold text-slate-900">Riwayat Pertemuan & Dokumentasi (${appData.attendances.length})</h3>
+                            <div class="relative">
+                                <i class="ph-bold ph-magnifying-glass text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xs"></i>
+                                <input type="text" value="${attendanceSearchQuery}" oninput="attendanceSearchQuery=this.value; renderContent()" placeholder="Cari nama siswa / materi..." class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-52">
+                            </div>
+                        </div>
+                        <div class="space-y-3 max-h-[680px] overflow-y-auto pr-1">
+                            ${(() => {
+                                const q = attendanceSearchQuery.trim().toLowerCase();
+                                const filteredAtt = appData.attendances.filter(att => {
+                                    if (!q) return true;
+                                    const st = appData.students.find(s => s.id === att.studentId);
+                                    const cls = appData.classes.find(c => c.id === att.classId);
+                                    return (
+                                        (st?.name || '').toLowerCase().includes(q) ||
+                                        (cls?.name || '').toLowerCase().includes(q) ||
+                                        (att.topic || '').toLowerCase().includes(q) ||
+                                        (att.date || '').includes(q)
+                                    );
+                                });
+                                if (filteredAtt.length === 0) {
+                                    return `<div class="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-2xl">Belum ada catatan absensi yang sesuai.</div>`;
+                                }
+                                return filteredAtt.map(att => {
+                                    const st = appData.students.find(s => s.id === att.studentId);
+                                    const cls = appData.classes.find(c => c.id === att.classId);
+                                    const statusStr = att.status || 'Hadir';
+                                    return `
+                                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-2">
+                                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                                <div>
+                                                    <span class="font-extrabold text-slate-900 text-sm">${st ? st.name : 'Siswa'}</span>
+                                                    <span class="text-slate-500 ml-1">(${st ? st.grade : '-'})</span>
+                                                </div>
+                                                <div class="flex flex-wrap items-center gap-1.5">
+                                                    <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px]">${cls ? cls.name : ''} ${att.sessionSlot ? '• ' + att.sessionSlot : ''} • ${att.date}</span>
+                                                    <span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] ${statusStr === 'Hadir' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${statusStr}</span>
+                                                </div>
+                                            </div>
+                                            <div><strong>Materi:</strong> ${att.topic || '-'}</div>
+                                            ${att.evaluation ? `<div class="p-2.5 rounded-xl bg-white border border-slate-200/70"><strong>Evaluasi:</strong> ${att.evaluation}</div>` : ''}
+                                            ${att.photoData ? `<img src="${att.photoData}" onclick="openPhotoLightbox('${att.photoData}', '${st ? st.name : ''} - ${(att.topic || '').replace(/'/g, "\\'")} (${att.date})')" class="h-32 w-full sm:w-56 object-cover rounded-xl border border-slate-200 cursor-pointer">` : ''}
+                                            <div class="flex flex-wrap items-center justify-end gap-1.5 pt-1 border-t border-slate-200/70">
+                                                <button type="button" onclick="sendAttendanceReportViaWA('${att.id}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold inline-flex items-center gap-1">
+                                                    <i class="ph-bold ph-whatsapp-logo"></i> Kirim WA
+                                                </button>
+                                                <button type="button" onclick="openEditAttendanceModal('${att.id}')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold">
+                                                    Edit
+                                                </button>
+                                                <button type="button" onclick="deleteAttendance('${att.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold">
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('');
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openEditAttendanceModal(attId) {
+            const att = appData.attendances.find(a => a.id === attId);
+            if (!att) return;
+            const st = appData.students.find(s => s.id === att.studentId);
+            openModal(`
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-extrabold text-slate-900">Edit Absensi & Evaluasi: ${st ? st.name : 'Siswa'}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+                </div>
+                <form onsubmit="saveEditedAttendance(event, '${att.id}')" class="space-y-3 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Tanggal *</label>
+                            <input type="date" id="edit-att-date" value="${att.date}" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Status Kehadiran *</label>
+                            <select id="edit-att-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold">
+                                ${['Hadir', 'Izin', 'Sakit', 'Alpha'].map(stOpt => `<option value="${stOpt}" ${(att.status || 'Hadir') === stOpt ? 'selected' : ''}>${stOpt}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Jam Sesi Belajar</label>
+                        <select id="edit-att-slot" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                            <option value="">-- Sesuai Jadwal Siswa --</option>
+                            ${TIME_SLOT_OPTIONS.map(slot => `<option value="${slot}" ${att.sessionSlot === slot ? 'selected' : ''}>${slot}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Materi Pembelajaran *</label>
+                        <input type="text" id="edit-att-topic" value="${(att.topic || '').replace(/"/g, '&quot;')}" required class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Evaluasi Perkembangan Siswa *</label>
+                        <textarea id="edit-att-eval" rows="2" required class="w-full px-3 py-2 rounded-xl border border-slate-300">${att.evaluation || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Ganti Foto Kegiatan (Opsional)</label>
+                        <input type="file" id="edit-att-photo" accept="image/*" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700">
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">Simpan Perubahan</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        async function saveEditedAttendance(e, attId) {
+            e.preventDefault();
+            const att = appData.attendances.find(a => a.id === attId);
+            if (!att) return;
+            att.date = document.getElementById('edit-att-date').value;
+            att.status = document.getElementById('edit-att-status').value;
+            att.sessionSlot = document.getElementById('edit-att-slot').value;
+            att.topic = document.getElementById('edit-att-topic').value.trim();
+            att.evaluation = document.getElementById('edit-att-eval').value.trim();
+            att.records = [{ studentId: att.studentId, status: att.status }];
+
+            const newPhotoFile = document.getElementById('edit-att-photo')?.files?.[0];
+            if (newPhotoFile) {
+                att.photoData = await compressAttendancePhoto(newPhotoFile);
+            }
+
+            if (att.status === 'Hadir' && att.studentId) {
+                syncSessionMilestoneInvoices(att.studentId);
+            }
+            saveData();
+            closeModal();
+            renderContent();
+            showToast('Catatan absensi & evaluasi berhasil diperbarui!');
+        }
+
+        function deleteAttendance(attId) {
+            const att = appData.attendances.find(a => a.id === attId);
+            if (!att) return;
+            const st = appData.students.find(s => s.id === att.studentId);
+            openModal(`
+                <div class="space-y-4 text-xs">
+                    <h3 class="text-base font-extrabold text-slate-900">Hapus Riwayat Pertemuan?</h3>
+                    <p class="text-slate-600">Apakah Anda yakin ingin menghapus catatan pertemuan <strong>${st ? st.name : 'Siswa'}</strong> pada tanggal <strong>${att.date}</strong>?</p>
+                    <div class="flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button onclick="confirmDeleteAttendance('${att.id}')" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">Ya, Hapus</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function confirmDeleteAttendance(attId) {
+            appData.attendances = appData.attendances.filter(a => a.id !== attId);
+            saveData();
+            closeModal();
+            renderContent();
+            showToast('Catatan pertemuan berhasil dihapus.');
+        }
+
+        async function submitSingleStudentAttendance(e) {
+            e.preventDefault();
+            const classId = document.getElementById('att-class-select').value;
+            const studentId = document.getElementById('att-student-select')?.value;
+            const date = document.getElementById('att-date').value;
+            const status = document.getElementById('att-status').value;
+            const sessionSlot = document.getElementById('att-session-slot').value;
+            const topic = document.getElementById('att-topic').value.trim();
+            const evaluation = document.getElementById('att-evaluation').value.trim();
+            const fileInput = document.getElementById('att-photo-file');
+
+            if (!studentId) return showToast('Pilih siswa terlebih dahulu!', 'error');
+
+            const photoData = await compressAttendancePhoto(fileInput?.files?.[0]);
+
+            appData.attendances.unshift({
+                id: 'ATT-' + Date.now(),
+                classId,
+                studentId,
+                date,
+                status,
+                sessionSlot,
+                topic,
+                evaluation,
+                photoData,
+                records: [{ studentId, status }]
+            });
+
+            let generatedInvoice = false;
+            if (status === 'Hadir') {
+                generatedInvoice = syncSessionMilestoneInvoices(studentId);
+            }
+
+            saveData();
+            renderContent();
+
+            const st = appData.students.find(s => s.id === studentId);
+            if (generatedInvoice) {
+                showToast(`Absensi ${st?.name} tersimpan & Tagihan SPP otomatis terbit!`);
+            } else {
+                showToast(`Laporan belajar ${st?.name} berhasil disimpan!`);
+            }
+        }
+
+        // =====================================================================
+        // TAB 4: MEDIA PEMBELAJARAN
+        // =====================================================================
+        function renderMediaTab() {
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+                    <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900">Bagikan Media & Modul Belajar</h2>
+                            <p class="text-xs text-slate-500">Materi otomatis muncul di Portal Orang Tua sesuai jenjang/kelas ananda.</p>
+                        </div>
+                        <form onsubmit="addLearningMedia(event)" class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Target Jenjang / Kelas *</label>
+                                <select id="med-grade" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                    <option value="Semua Kelas">Semua Kelas</option>
+                                    ${GRADE_OPTIONS.map(g => `<option value="${g}">${g}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Jenis Media *</label>
+                                <select id="med-type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                    <option value="Tautan Google Drive / PDF">Tautan Google Drive / PDF</option>
+                                    <option value="Video Pembelajaran">Video Pembelajaran</option>
+                                    <option value="Latihan Soal / Quiz">Latihan Soal / Quiz</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Judul Materi / Modul *</label>
+                                <input type="text" id="med-title" required placeholder="Contoh: Modul Latihan PTS Matematika" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Tautan / URL Materi *</label>
+                                <input type="url" id="med-url" required placeholder="https://drive.google.com/..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Catatan Singkat</label>
+                                <textarea id="med-notes" rows="2" placeholder="Petunjuk pengerjaan untuk siswa..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300"></textarea>
+                            </div>
+                            <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold">Publikasikan Media</button>
+                        </form>
+                    </div>
+
+                    <div class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                        <h3 class="text-base font-extrabold text-slate-900">Daftar Media & Modul Aktif (${appData.learningMedia.length})</h3>
+                        <div class="space-y-3">
+                            ${appData.learningMedia.map(m => `
+                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px]">${m.gradeLevel}</span>
+                                            <span class="text-slate-500 font-semibold">${m.type}</span>
+                                        </div>
+                                        <div class="font-extrabold text-slate-900 text-sm">${m.title}</div>
+                                        ${m.notes ? `<p class="text-slate-600">${m.notes}</p>` : ''}
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <a href="${m.url}" target="_blank" rel="noopener" class="px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-bold">Buka Tautan</a>
+                                        <button onclick="deleteMedia('${m.id}')" class="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 font-bold">Hapus</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addLearningMedia(e) {
+            e.preventDefault();
+            appData.learningMedia.unshift({
+                id: 'MED-' + Date.now(),
+                gradeLevel: document.getElementById('med-grade').value,
+                type: document.getElementById('med-type').value,
+                title: document.getElementById('med-title').value.trim(),
+                url: document.getElementById('med-url').value.trim(),
+                fileName: '',
+                notes: document.getElementById('med-notes').value.trim(),
+                createdAt: new Date().toISOString().slice(0, 10)
+            });
+            saveData();
+            renderContent();
+            showToast('Media pembelajaran berhasil dipublikasikan!');
+        }
+
+        function deleteMedia(id) {
+            appData.learningMedia = appData.learningMedia.filter(m => m.id !== id);
+            saveData();
+            renderContent();
+            showToast('Media dihapus.');
+        }
+
+        // =====================================================================
+        // TAB 5: KEUANGAN & SPP (OTOMATIS PAKET 8X/12X + HAPUS)
+        // =====================================================================
+        function renderFinanceTab() {
+            const totalPaid = appData.invoices.filter(i => i.status === 'Lunas').reduce((a, b) => a + Number(b.amount || 0), 0);
+            const totalPending = appData.invoices.filter(i => i.status !== 'Lunas').reduce((a, b) => a + Number(b.amount || 0), 0);
+
+            return `
+                <div class="space-y-5 animate-fade-in">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                            <div class="text-xs font-semibold text-slate-500">Total Pemasukan Lunas</div>
+                            <div class="text-xl font-extrabold text-emerald-600 mt-1">${formatRupiah(totalPaid)}</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                            <div class="text-xs font-semibold text-slate-500">Tagihan Belum Lunas</div>
+                            <div class="text-xl font-extrabold text-rose-600 mt-1">${formatRupiah(totalPending)}</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                            <div class="text-xs font-semibold text-slate-500">Total Tagihan Tercatat</div>
+                            <div class="text-xl font-extrabold text-slate-900 mt-1">${appData.invoices.length} Invoice</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h2 class="text-base font-extrabold text-slate-900">Daftar Tagihan & Pembayaran SPP</h2>
+                                <p class="text-xs text-slate-500">Invoice otomatis muncul di Portal Orang Tua ketika siswa mencapai target paket (8x atau 12x hadir).</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="runAutoGenerateAllMilestoneInvoices()" class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-xs">
+                                    <i class="ph-bold ph-sparkle"></i> Cek & Terbitkan Otomatis (8x/12x)
+                                </button>
+                                <button onclick="openCreateManualInvoiceModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">
+                                    + Buat Tagihan Manual
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                            <div class="relative flex-1 max-w-xs">
+                                <i class="ph-bold ph-magnifying-glass text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xs"></i>
+                                <input type="text" value="${financeSearchQuery}" oninput="financeSearchQuery=this.value; renderContent()" placeholder="Cari siswa / no. invoice..." class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 outline-none w-full">
+                            </div>
+                            <div class="flex flex-wrap gap-1">
+                                ${['ALL', 'Belum Bayar', 'Menunggu Verifikasi', 'Lunas'].map(stOpt => `
+                                    <button onclick="financeStatusFilter='${stOpt}'; renderContent()" class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition ${financeStatusFilter === stOpt ? 'bg-slate-900 text-amber-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                        ${stOpt === 'ALL' ? 'Semua Status' : stOpt}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[11px]">
+                                        <th class="p-3.5 font-bold">No. Invoice</th>
+                                        <th class="p-3.5 font-bold">Siswa</th>
+                                        <th class="p-3.5 font-bold">Keterangan</th>
+                                        <th class="p-3.5 font-bold">Nominal</th>
+                                        <th class="p-3.5 font-bold">Status</th>
+                                        <th class="p-3.5 font-bold text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${(() => {
+                                        const q = financeSearchQuery.trim().toLowerCase();
+                                        const filteredInv = appData.invoices.filter(inv => {
+                                            if (financeStatusFilter !== 'ALL' && inv.status !== financeStatusFilter) return false;
+                                            if (!q) return true;
+                                            const st = appData.students.find(s => s.id === inv.studentId);
+                                            return (
+                                                (inv.id || '').toLowerCase().includes(q) ||
+                                                (st?.name || '').toLowerCase().includes(q) ||
+                                                (inv.description || '').toLowerCase().includes(q)
+                                            );
+                                        });
+                                        if (filteredInv.length === 0) {
+                                            return `<tr><td colspan="6" class="p-6 text-center text-slate-400">Tidak ada tagihan yang cocok dengan filter saat ini.</td></tr>`;
+                                        }
+                                        return filteredInv.map(inv => {
+                                            const st = appData.students.find(s => s.id === inv.studentId);
+                                            const badge = inv.status === 'Lunas'
+                                                ? 'bg-emerald-100 text-emerald-800'
+                                                : (inv.status === 'Menunggu Verifikasi' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+                                            return `
+                                                <tr class="hover:bg-slate-50/70">
+                                                    <td class="p-3.5 font-bold text-slate-700">${inv.id}</td>
+                                                    <td class="p-3.5 font-extrabold text-slate-900">${st ? st.name : 'Siswa'}</td>
+                                                    <td class="p-3.5">
+                                                        <div>${inv.description}</div>
+                                                        ${inv.proofNote ? `<div class="text-[11px] text-indigo-600 font-medium">Catatan: ${inv.proofNote}</div>` : ''}
+                                                    </td>
+                                                    <td class="p-3.5 font-extrabold text-slate-900">${formatRupiah(inv.amount)}</td>
+                                                    <td class="p-3.5"><span class="px-2.5 py-1 rounded-full font-bold text-[11px] ${badge}">${inv.status}</span></td>
+                                                    <td class="p-3.5 text-right whitespace-nowrap space-x-1">
+                                                        <button onclick="sendInvoiceViaWA('${inv.id}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold inline-flex items-center gap-1" title="Kirim Tagihan ke WA Wali">
+                                                            <i class="ph-bold ph-whatsapp-logo"></i> WA
+                                                        </button>
+                                                        ${inv.status !== 'Lunas' ? `<button onclick="markInvoicePaid('${inv.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Verifikasi Lunas</button>` : ''}
+                                                        <button onclick="downloadReceiptPDF('${inv.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold">Kuitansi</button>
+                                                        <button onclick="deleteInvoice('${inv.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold">Hapus</button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('');
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function markInvoicePaid(invId) {
+            const inv = appData.invoices.find(i => i.id === invId);
+            if (!inv) return;
+            inv.status = 'Lunas';
+            inv.paidAmount = inv.amount;
+            inv.paidDate = new Date().toISOString().slice(0, 10);
+            saveData();
+            renderContent();
+            showToast(`Tagihan ${inv.id} ditandai LUNAS!`);
+        }
+
+        function deleteInvoice(invId) {
+            const inv = appData.invoices.find(i => i.id === invId);
+            if (!inv) return;
+            openModal(`
+                <div class="space-y-4 text-xs">
+                    <h3 class="text-base font-extrabold text-slate-900">Hapus Tagihan SPP?</h3>
+                    <p class="text-slate-600">Apakah Anda yakin ingin menghapus tagihan <strong>${inv.id}</strong> (${inv.description})?</p>
+                    <div class="flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button onclick="confirmDeleteInvoice('${inv.id}')" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">Ya, Hapus</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function confirmDeleteInvoice(invId) {
+            appData.invoices = appData.invoices.filter(i => i.id !== invId);
+            saveData();
+            closeModal();
+            renderContent();
+            showToast('Tagihan berhasil dihapus.');
+        }
+
+        function openCreateManualInvoiceModal() {
+            openModal(`
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-extrabold text-slate-900">Buat Tagihan SPP / Biaya Manual</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+                </div>
+                <form onsubmit="saveManualInvoice(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Pilih Siswa *</label>
+                        <select id="man-inv-student" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                            ${appData.students.map(s => `<option value="${s.id}">${s.name} (${s.grade}) - ${formatRupiah(s.tariff)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Keterangan Tagihan *</label>
+                        <input type="text" id="man-inv-desc" required placeholder="Contoh: SPP Bulan Desember 2026" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nominal (Rp) *</label>
+                        <input type="number" id="man-inv-amount" required value="100000" class="w-full px-3 py-2 rounded-xl border border-slate-300">
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold">Terbitkan Tagihan</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        function saveManualInvoice(e) {
+            e.preventDefault();
+            const studentId = document.getElementById('man-inv-student').value;
+            const description = document.getElementById('man-inv-desc').value.trim();
+            const amount = Number(document.getElementById('man-inv-amount').value || 0);
+            const nowMonth = new Date().toISOString().slice(0, 7);
+
+            appData.invoices.unshift({
+                id: `INV-${nowMonth.replace('-', '')}-${String(Math.floor(100 + Math.random() * 900))}`,
+                studentId,
+                month: nowMonth,
+                description,
+                amount,
+                paidAmount: 0,
+                status: 'Belum Bayar',
+                paidDate: '',
+                proofNote: '',
+                milestoneSeq: 0
+            });
+            saveData();
+            closeModal();
+            renderContent();
+            showToast('Tagihan manual berhasil diterbitkan!');
+        }
+
+        function downloadReceiptPDF(invId) {
+            const inv = appData.invoices.find(i => i.id === invId);
+            if (!inv) return;
+            const st = appData.students.find(s => s.id === inv.studentId);
+            const parent = st ? appData.parents.find(p => p.id === st.parentId) : null;
+
+            const receiptEl = document.createElement('div');
+            receiptEl.style.padding = '28px';
+            receiptEl.style.fontFamily = 'Inter, sans-serif';
+            receiptEl.innerHTML = `
+                <div style="border:2px solid #1e293b; border-radius:16px; padding:24px;">
+                    <h2 style="margin:0; font-size:20px; color:#0f172a;">${appData.profile.name}</h2>
+                    <p style="margin:4px 0 16px; font-size:12px; color:#475569;">${appData.profile.address} • WA: ${appData.profile.wa}</p>
+                    <hr style="border:none; border-top:1px solid #cbd5e1; margin:12px 0;">
+                    <h3 style="margin:0 0 12px; font-size:15px;">KUITANSI PEMBAYARAN SPP</h3>
+                    <table style="width:100%; font-size:13px; line-height:1.8;">
+                        <tr><td><strong>No. Invoice</strong></td><td>: ${inv.id}</td></tr>
+                        <tr><td><strong>Nama Siswa</strong></td><td>: ${st ? st.name : '-'} (${st ? st.grade : '-'})</td></tr>
+                        <tr><td><strong>Wali Murid</strong></td><td>: ${parent ? parent.name : '-'}</td></tr>
+                        <tr><td><strong>Keterangan</strong></td><td>: ${inv.description}</td></tr>
+                        <tr><td><strong>Nominal</strong></td><td>: <strong>${formatRupiah(inv.amount)}</strong></td></tr>
+                        <tr><td><strong>Status</strong></td><td>: <strong>${inv.status}</strong> ${inv.paidDate ? `(${inv.paidDate})` : ''}</td></tr>
+                    </table>
+                    <div style="margin-top:28px; text-align:right; font-size:12px;">
+                        <div>Mranggen, ${inv.paidDate || new Date().toISOString().slice(0, 10)}</div>
+                        <div style="margin-top:36px; font-weight:bold;">${appData.profile.owner}</div>
+                    </div>
+                </div>
+            `;
+
+            if (typeof html2pdf !== 'undefined') {
+                html2pdf().from(receiptEl).save(`Kuitansi_${inv.id}.pdf`);
+                showToast('Mengunduh kuitansi PDF...');
+            } else {
+                showToast('Fitur PDF siap digunakan.', 'success');
+            }
+        }
+
+        // =====================================================================
+        // TAB 6: LAPORAN & PENGATURAN (TERMASUK SINKRONISASI CLOUD MANDIRI)
+        // =====================================================================
+        function renderReportsTab() {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?sync=${encodeURIComponent(sharedSyncId)}`;
+            const existingCustomCfg = localStorage.getItem(CUSTOM_CLOUD_KEY) || '';
+
+            return `
+                <div class="space-y-6 animate-fade-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Pengaturan Profil & PIN -->
+                        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                            <h2 class="text-base font-extrabold text-slate-900">Profil Lembaga & Keamanan PIN</h2>
+                            <form onsubmit="saveProfileSettings(event)" class="space-y-3 text-xs">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Nama Lembaga</label>
+                                    <input type="text" id="set-name" value="${appData.profile.name}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Nama Owner / Pimpinan</label>
+                                    <input type="text" id="set-owner" value="${appData.profile.owner}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">No. WhatsApp Admin</label>
+                                        <input type="text" id="set-wa" value="${appData.profile.wa}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">Jam Operasional</label>
+                                        <input type="text" id="set-hours" value="${appData.profile.hours}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Alamat Lengkap</label>
+                                    <input type="text" id="set-address" value="${appData.profile.address}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">PIN Owner / Admin</label>
+                                        <input type="text" id="set-admin-pin" value="${appData.profile.adminPin}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold text-slate-700 mb-1">PIN Tutor</label>
+                                        <input type="text" id="set-tutor-pin" value="${appData.profile.tutorPin}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold">
+                                    </div>
+                                </div>
+                                <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">Simpan Profil & PIN</button>
+                            </form>
+                        </div>
+
+                        <!-- Pengumuman & Sinkronisasi Lintas HP -->
+                        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                            <h3 class="text-base font-extrabold text-slate-900">Pengumuman Wali Murid & Bagikan Akses</h3>
+                            <form onsubmit="addAnnouncement(event)" class="space-y-2.5 text-xs">
+                                <input type="text" id="ann-title" required placeholder="Judul Pengumuman..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+                                <textarea id="ann-content" rows="2" required placeholder="Isi pengumuman untuk orang tua..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300"></textarea>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="submit" class="px-4 py-2.5 rounded-xl bg-slate-900 text-amber-300 font-bold">Terbitkan Pengumuman</button>
+                                    <button type="button" onclick="copyParentShareMessage()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Salin Panduan untuk Orang Tua</button>
+                                </div>
+                            </form>
+
+                            ${appData.announcements.length > 0 ? `
+                                <div class="space-y-2 pt-2 border-t border-slate-100 max-h-40 overflow-y-auto">
+                                    ${appData.announcements.map(ann => `
+                                        <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs flex items-start justify-between gap-2">
+                                            <div>
+                                                <div class="font-bold text-slate-900">${ann.title} <span class="text-[10px] font-normal text-slate-500">(${ann.date})</span></div>
+                                                <div class="text-slate-600 mt-0.5">${ann.content}</div>
+                                            </div>
+                                            <button type="button" onclick="deleteAnnouncement('${ann.id}')" class="text-rose-600 hover:underline font-bold text-[11px] shrink-0">Hapus</button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+
+                            <!-- Pengaturan Koneksi Cloud Mandiri -->
+                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5 text-xs">
+                                <div class="font-extrabold text-slate-900 flex items-center gap-1.5">
+                                    <i class="ph-bold ph-cloud-check text-indigo-600"></i> Sinkronisasi Cloud Lintas HP (Netlify / Hosting Mandiri)
+                                </div>
+                                <p class="text-slate-600">Bagikan tautan ini ke HP Tutor & Orang Tua agar otomatis tersinkron:</p>
+                                <input type="text" readonly value="${shareUrl}" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-[11px] font-mono text-slate-700">
+                                <details class="pt-1">
+                                    <summary class="cursor-pointer font-bold text-indigo-700">Hubungkan Database Firebase Pribadi (Paling Stabil & Gratis)</summary>
+                                    <div class="mt-2 space-y-2 text-slate-600">
+                                        <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                                            <div class="font-bold">Catatan Penting:</div>
+                                            <div>Jangan masukkan alamat website Netlify ke kotak di bawah ini. Kotak di bawah hanya diisi kode konfigurasi JSON dari <strong>console.firebase.google.com</strong> (Project Settings &rarr; Web App &rarr; <code>firebaseConfig</code>).</div>
+                                        </div>
+                                        <textarea id="custom-cloud-json" rows="3" placeholder='{"apiKey":"AIzaSy...","authDomain":"...","projectId":"..."}' class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-[11px]">${existingCustomCfg}</textarea>
+                                        <div class="flex gap-2">
+                                            <button type="button" onclick="saveCustomCloudConfig()" class="px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-bold">Simpan & Aktifkan Cloud</button>
+                                            <button type="button" onclick="clearCustomCloudConfig()" class="px-3.5 py-2 rounded-xl bg-slate-200 text-slate-700 font-bold">Reset</button>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveProfileSettings(e) {
+            e.preventDefault();
+            appData.profile.name = document.getElementById('set-name').value.trim();
+            appData.profile.owner = document.getElementById('set-owner').value.trim();
+            appData.profile.wa = document.getElementById('set-wa').value.trim();
+            appData.profile.hours = document.getElementById('set-hours').value.trim();
+            appData.profile.address = document.getElementById('set-address').value.trim();
+            appData.profile.adminPin = document.getElementById('set-admin-pin').value.trim();
+            appData.profile.tutorPin = document.getElementById('set-tutor-pin').value.trim();
+            saveData(true);
+            applyProfileBranding();
+            showToast('Pengaturan profil & PIN berhasil disimpan & diunggah ke Cloud!');
+        }
+
+        function addAnnouncement(e) {
+            e.preventDefault();
+            appData.announcements.unshift({
+                id: 'ANN-' + Date.now(),
+                date: new Date().toISOString().slice(0, 10),
+                title: document.getElementById('ann-title').value.trim(),
+                content: document.getElementById('ann-content').value.trim()
+            });
+            saveData();
+            e.target.reset();
+            renderContent();
+            showToast('Pengumuman baru berhasil diterbitkan!');
+        }
+
+        function deleteAnnouncement(annId) {
+            appData.announcements = appData.announcements.filter(a => a.id !== annId);
+            saveData();
+            renderContent();
+            showToast('Pengumuman dihapus.');
+        }
+
+        function copyParentShareMessage() {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?sync=${encodeURIComponent(sharedSyncId)}`;
+            const text = `Assalamu'alaikum Bapak/Ibu Wali Murid ${appData.profile.name}.\n\nUntuk memantau jadwal sesi belajar, foto dokumentasi kegiatan anak, evaluasi tutor, materi belajar, serta tagihan SPP, silakan buka Portal Orang Tua melalui tautan berikut:\n${shareUrl}\n\nCara masuk: Pilih "Portal Orang Tua" lalu masukkan Nomor WhatsApp Bapak/Ibu yang terdaftar di Bimbel Pintara.\n\nTerima kasih.\n(${appData.profile.owner})`;
+
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast('Panduan & tautan Portal Orang Tua berhasil disalin!');
+        }
+
+        function saveCustomCloudConfig() {
+            const raw = document.getElementById('custom-cloud-json')?.value.trim();
+            if (!raw) return showToast('Tempelkan konfigurasi JSON terlebih dahulu.', 'error');
+            try {
+                const parsed = JSON.parse(raw);
+                if (!parsed.apiKey) throw new Error('Invalid');
+                localStorage.setItem(CUSTOM_CLOUD_KEY, JSON.stringify(parsed));
+                showToast('Konfigurasi cloud disimpan! Memuat ulang...');
+                setTimeout(() => location.reload(), 900);
+            } catch (e) {
+                showToast('Format JSON tidak valid. Pastikan berisi apiKey.', 'error');
+            }
+        }
+
+        function clearCustomCloudConfig() {
+            localStorage.removeItem(CUSTOM_CLOUD_KEY);
+            showToast('Konfigurasi cloud kustom dihapus.');
+        }
+
+        // =====================================================================
+        // PORTAL ORANG TUA (PRIVASI PER ANAK & INVOICE SESUAI TARGET 8X / 12X)
+        // =====================================================================
+        function renderParentPortal() {
+            const normalizePhone = (ph) => {
+                let d = String(ph || '').replace(/\D/g, '');
+                if (d.startsWith('62')) d = '0' + d.slice(2);
+                return d;
+            };
+            const matchedParents = appData.parents.filter(p => normalizePhone(p.phone) === currentUserId);
+            const parentIds = matchedParents.map(p => p.id);
+            const myChildren = appData.students.filter(s => parentIds.includes(s.parentId));
+
+            if (myChildren.length === 0) {
+                return `<div class="bg-white p-8 rounded-2xl text-center text-sm text-slate-500">Data siswa tidak ditemukan.</div>`;
+            }
+
+            const activeChild = myChildren.find(c => c.id === selectedParentChildId) || myChildren[0];
+            selectedParentChildId = activeChild.id;
+
+            const stats = getStudentAttendanceStats(activeChild.id);
+
+            const childAttendances = appData.attendances.filter(att => {
+                if (att.studentId) return att.studentId === activeChild.id;
+                return Array.isArray(att.records) && att.records.some(r => r.studentId === activeChild.id);
+            });
+
+            const childInvoices = appData.invoices.filter(inv => {
+                if (inv.studentId !== activeChild.id) return false;
+                const seq = Number(inv.milestoneSeq || 0);
+                if (seq === 0) return true;
+                return stats.totalHadir >= seq * stats.targetPkg;
+            });
+
+            const relevantMedia = appData.learningMedia.filter(m =>
+                m.gradeLevel === 'Semua Kelas' || m.gradeLevel === activeChild.grade
+            );
+
+            const schedulesHtml = (activeChild.classIds || []).map(cid => {
+                const cls = appData.classes.find(c => c.id === cid);
+                const slot = activeChild.classSlots && activeChild.classSlots[cid] ? activeChild.classSlots[cid] : 'Sesuai Jadwal Kelas';
+                return `<span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 font-bold text-xs">${cls ? cls.name : cid} • ${slot}</span>`;
+            }).join('') || '<span class="text-xs text-slate-400">Jadwal sedang diatur oleh admin</span>';
+
+            return `
+                <div class="space-y-6 animate-fade-in">
+                    <!-- Header Anak & Pemilih Anak -->
+                    <div class="bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-3xl p-6 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="space-y-1.5">
+                            <span class="px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold">Portal Wali Murid • ${matchedParents[0]?.name || ''}</span>
+                            <h2 class="text-2xl font-extrabold">${activeChild.name} <span class="text-base font-medium text-indigo-200">(${activeChild.grade} • ${activeChild.programName})</span></h2>
+                            <div class="text-xs text-slate-300">
+                                Paket Bimbingan: <strong class="text-amber-300">${stats.targetPkg}x Pertemuan</strong> • Progres Siklus Berjalan: <strong class="text-emerald-300">${stats.currentCycleCount} / ${stats.targetPkg} Hadir</strong> (Total ${stats.totalHadir}x hadir)
+                            </div>
+                        </div>
+
+                        ${myChildren.length > 1 ? `
+                            <div class="flex flex-wrap gap-1.5">
+                                ${myChildren.map(ch => `
+                                    <button onclick="selectedParentChildId='${ch.id}'; renderContent()" class="px-3.5 py-2 rounded-xl text-xs font-bold ${ch.id === activeChild.id ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'}">
+                                        ${ch.name}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${appData.announcements.length > 0 ? `
+                        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                            <div class="flex items-center gap-2 text-xs font-extrabold text-amber-900">
+                                <i class="ph-fill ph-megaphone text-base text-amber-600"></i> Papan Pengumuman ${appData.profile.name}
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                ${appData.announcements.map(ann => `
+                                    <div class="p-3 rounded-xl bg-white border border-amber-200/80 text-xs">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="font-extrabold text-slate-900">${ann.title}</span>
+                                            <span class="text-[11px] text-slate-400">${ann.date}</span>
+                                        </div>
+                                        <p class="text-slate-600 mt-1">${ann.content}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Kolom Kiri: Jadwal & Laporan Belajar Anak -->
+                        <div class="lg:col-span-7 space-y-5">
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2.5">
+                                <h3 class="text-sm font-extrabold text-slate-900">Jadwal Rombel & Jam Sesi ${activeChild.name}</h3>
+                                <div class="flex flex-wrap gap-2">${schedulesHtml}</div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-base font-extrabold text-slate-900">Riwayat Belajar, Foto & Evaluasi ${activeChild.name}</h3>
+                                    <span class="text-xs font-bold text-indigo-600">${childAttendances.length} Pertemuan</span>
+                                </div>
+
+                                ${childAttendances.length === 0 ? `
+                                    <div class="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+                                        Belum ada catatan pertemuan untuk ${activeChild.name}.
+                                    </div>
+                                ` : `
+                                    <div class="space-y-3">
+                                        ${childAttendances.map(att => {
+                                            const cls = appData.classes.find(c => c.id === att.classId);
+                                            const stStatus = att.status || (att.records?.find(r => r.studentId === activeChild.id)?.status) || 'Hadir';
+                                            return `
+                                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-2.5">
+                                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                                        <span class="font-extrabold text-slate-900">${att.date} • ${cls ? cls.name : ''} ${att.sessionSlot ? `(${att.sessionSlot})` : ''}</span>
+                                                        <span class="px-2.5 py-0.5 rounded-full font-bold ${stStatus === 'Hadir' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stStatus}</span>
+                                                    </div>
+                                                    <div><strong>Materi Belajar:</strong> ${att.topic || '-'}</div>
+                                                    ${att.evaluation ? `<div class="p-3 rounded-xl bg-white border border-slate-200/70"><strong>Evaluasi Tutor:</strong> ${att.evaluation}</div>` : ''}
+                                                    ${att.photoData ? `
+                                                        <div class="space-y-2 pt-1">
+                                                            <img src="${att.photoData}" onclick="openPhotoLightbox('${att.photoData}', '${activeChild.name} - ${att.date}')" class="h-44 w-full sm:w-64 object-cover rounded-xl border border-slate-200 cursor-pointer">
+                                                            <div>
+                                                                <button type="button" onclick="downloadChildPhoto('${att.id}', '${activeChild.name.replace(/'/g, '')}')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold inline-flex items-center gap-1.5">
+                                                                    <i class="ph-bold ph-download-simple"></i> Unduh Foto Ananda
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- Kolom Kanan: Tagihan SPP & Media Pembelajaran -->
+                        <div class="lg:col-span-5 space-y-5">
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-base font-extrabold text-slate-900">Tagihan & Kuitansi SPP</h3>
+                                    <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold">Paket ${stats.targetPkg}x</span>
+                                </div>
+
+                                ${childInvoices.length === 0 ? `
+                                    <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-xs text-emerald-900 space-y-1">
+                                        <div class="font-extrabold">Belum Ada Tagihan Jatuh Tempo</div>
+                                        <p>Ananda ${activeChild.name} baru mengikuti <strong>${stats.currentCycleCount} dari ${stats.targetPkg} pertemuan</strong>. Invoice SPP akan muncul otomatis setelah mencapai <strong>${stats.targetPkg}x kehadiran</strong>.</p>
+                                    </div>
+                                ` : `
+                                    <div class="space-y-3">
+                                        ${childInvoices.map(inv => `
+                                            <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 text-xs space-y-2">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="font-bold text-slate-500">${inv.id}</span>
+                                                    <span class="px-2.5 py-0.5 rounded-full font-bold ${inv.status === 'Lunas' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${inv.status}</span>
+                                                </div>
+                                                <div class="font-extrabold text-slate-900">${inv.description}</div>
+                                                <div class="text-base font-extrabold text-indigo-700">${formatRupiah(inv.amount)}</div>
+                                                <div class="flex flex-wrap gap-2 pt-1">
+                                                    ${inv.status === 'Belum Bayar' ? `
+                                                        <button onclick="parentConfirmPayment('${inv.id}')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Konfirmasi Sudah Transfer</button>
+                                                    ` : ''}
+                                                    <button onclick="downloadReceiptPDF('${inv.id}')" class="px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold">Unduh Kuitansi</button>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `}
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                <h3 class="text-base font-extrabold text-slate-900">Materi & Modul Belajar (${activeChild.grade})</h3>
+                                ${relevantMedia.length === 0 ? `<p class="text-xs text-slate-400">Belum ada modul tambahan.</p>` : `
+                                    <div class="space-y-2.5">
+                                        ${relevantMedia.map(m => `
+                                            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-1.5">
+                                                <div class="font-extrabold text-slate-900">${m.title}</div>
+                                                <p class="text-slate-600">${m.notes || ''}</p>
+                                                <a href="${m.url}" target="_blank" rel="noopener" class="inline-block px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">Buka Materi</a>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function parentConfirmPayment(invId) {
+            const inv = appData.invoices.find(i => i.id === invId);
+            if (!inv) return;
+            inv.status = 'Menunggu Verifikasi';
+            inv.proofNote = `Dikonfirmasi wali murid pada ${new Date().toISOString().slice(0, 10)}`;
+            saveData();
+            renderContent();
+            showToast('Konfirmasi pembayaran terkirim ke Admin Bimbel Pintara!');
+        }
+
+        function downloadChildPhoto(attId, studentName) {
+            const att = appData.attendances.find(a => a.id === attId);
+            if (!att || !att.photoData) return showToast('Foto tidak tersedia.', 'error');
+            const link = document.createElement('a');
+            link.href = att.photoData;
+            link.download = `Belajar_${studentName || 'Siswa'}_${att.date || 'Pintara'}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Mengunduh foto kegiatan belajar ananda...');
+        }
+
+        // =====================================================================
+        // BACKUP & RESTORE DATA JSON
+        // =====================================================================
+        function openBackupModal() {
+            openModal(`
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-extrabold text-slate-900">Cadangan & Pulihkan Data (JSON)</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+                </div>
+                <div class="space-y-4 text-xs">
+                    <p class="text-slate-600">Unduh file cadangan JSON secara berkala untuk menyimpan seluruh data siswa, rombel, absensi, foto, dan keuangan.</p>
+                    <button onclick="downloadBackupJSON()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold">
+                        Unduh File Cadangan (.json)
+                    </button>
+                    <div class="border-t border-slate-200 pt-3 space-y-2">
+                        <label class="block font-bold text-slate-700">Pulihkan dari File Cadangan (.json):</label>
+                        <input type="file" accept=".json" onchange="restoreBackupJSON(this)" class="w-full text-xs">
+                    </div>
+                </div>
+            `);
+        }
+
+        function downloadBackupJSON() {
+            const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Backup_Bimbel_Pintara_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('File cadangan JSON berhasil diunduh!');
+        }
+
+        function restoreBackupJSON(input) {
+            const file = input.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    appData = normalizeData(parsed);
+                    saveData();
+                    closeModal();
+                    refreshVisibleViews();
+                    showToast('Data berhasil dipulihkan dari file cadangan!');
+                } catch (err) {
+                    showToast('File JSON tidak valid!', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ---------------------------------------------------------------------
+        // EKSPOS FUNGSI KE GLOBAL WINDOW UNTUK ONCLICK / ONSUBMIT HTML
+        // ---------------------------------------------------------------------
+        Object.assign(window, {
+            showAuthPanel, updatePublicPricePreview, handlePublicRegistration,
+            toggleTutorSelect, handleStaffLogin, loginAsParent, logout,
+            switchTab, renderContent, closeModal, openPhotoLightbox, closePhotoLightbox,
+            openAddStudentModal, saveNewStudent, openEditStudentModal, saveEditedStudent,
+            deleteStudent, confirmDeleteStudent,
+            openManageClassModal, saveClassAssignments,
+            onAttendanceClassChange, onAttendanceStudentChange, previewAttendancePhotoInput,
+            submitSingleStudentAttendance,
+            addLearningMedia, deleteMedia,
+            openEditAttendanceModal, saveEditedAttendance, deleteAttendance, confirmDeleteAttendance,
+            sendInvoiceViaWA, sendAttendanceReportViaWA,
+            runAutoGenerateAllMilestoneInvoices, deleteInvoice, confirmDeleteInvoice,
+            markInvoicePaid, openCreateManualInvoiceModal, saveManualInvoice, downloadReceiptPDF,
+            saveProfileSettings, addAnnouncement, deleteAnnouncement, copyParentShareMessage,
+            saveCustomCloudConfig, clearCustomCloudConfig,
+            parentConfirmPayment, downloadChildPhoto, openBackupModal, downloadBackupJSON, restoreBackupJSON,
+            forceSyncNow
+        });
+
+        // Mulai Inisialisasi Halaman & Sinkronisasi Cloud
+        initAuthScreen();
+        initCloudSync();
+    </script>
+</body>
+</html>
